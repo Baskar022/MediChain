@@ -1,0 +1,30 @@
+{
+  "blocks": [
+    {
+      "index": 0,
+      "previousHash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "timestamp": 1704067200000,
+      "merkleRoot": "238447a339cbb5699fb8afab02706aa184dca0961277a98972e0b807f130b697",
+      "transactions": [
+        {
+          "txId": "tx_genesis_000000000000000000000000",
+          "type": "TX_AUDIT_LOG",
+          "payload": {
+            "message": "Genesis Block Initialized for Metro Diagnostics Lab Ledger"
+          },
+          "timestamp": 1704067200000,
+          "nonce": 0,
+          "signature": "genesis_sig",
+          "senderPubKey": "genesis_pubkey"
+        }
+      ],
+      "blockHash": "b485e861c73335ba5e68f11bb5cde6176d401cad496303b6ffee05f1f0e3ccc7",
+      "validator": "METRO_LAB_AUTHORITY",
+      "signature": "304502200e91cb71d65bacf815d285951e84073d5059a2aac2a8a0b7d85d521891d1cd0b022100a704772f2846aa58732e797db1cee2ad316540ed46c045aa156f0e4a7b7d7200"
+    }
+  ],
+  "records": [],
+  "consents": [],
+  "audits": [],
+  "updatedAt": 1792726366544
+}

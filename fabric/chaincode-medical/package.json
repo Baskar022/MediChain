@@ -1,0 +1,19 @@
+{
+  "name": "medical-chaincode",
+  "version": "1.0.0",
+  "description": "Hyperledger Fabric smart contract (chaincode) for MediChain sovereign medical records",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "fabric-contract-api": "^2.5.4",
+    "fabric-shim": "^2.5.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "typescript": "^5.4.5"
+  }
+}

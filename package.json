@@ -1,0 +1,42 @@
+{
+  "name": "medichain",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "contracts",
+    "web",
+    "interop"
+  ],
+  "scripts": {
+    "contracts:compile": "npm --prefix contracts run compile",
+    "contracts:test": "npm --prefix contracts run test",
+    "contracts:node": "npm --prefix contracts run node",
+    "contracts:deploy": "npm --prefix contracts run deploy:local",
+    "crypto:test": "npm --prefix web run test:crypto",
+    "backend:test": "npm --prefix web run test:backend",
+    "interop:test": "npm --prefix interop run test",
+    "test:all": "npm --prefix contracts run test && npm --prefix web run test:all && npm --prefix interop run test",
+    "test:security": "npm --prefix interop run test -- -g \"Phase I-8\"",
+    "seed": "npx ts-node scripts/seed.ts",
+    "seed:demo": "ts-node -P interop/tsconfig.json scripts/seed-interop.ts",
+    "seed:interop": "ts-node -P interop/tsconfig.json scripts/seed-interop.ts",
+    "status": "ts-node -P interop/tsconfig.json scripts/status.ts",
+    "reset:all": "ts-node -P interop/tsconfig.json scripts/reset-all.ts",
+    "start:clean": "ts-node -P interop/tsconfig.json scripts/start-clean.ts",
+    "demo:scenarios": "ts-node -P interop/tsconfig.json scripts/demo-scenarios.ts",
+    "demo:relocation": "ts-node -P interop/tsconfig.json scripts/demo-scenarios.ts",
+    "demo:referral": "ts-node -P interop/tsconfig.json scripts/demo-scenarios.ts",
+    "demo:emergency": "ts-node -P interop/tsconfig.json scripts/demo-scenarios.ts",
+    "demo:labpush": "ts-node -P interop/tsconfig.json scripts/demo-scenarios.ts",
+    "demo:revocation": "ts-node -P interop/tsconfig.json scripts/demo-scenarios.ts",
+    "demo:tamper": "ts-node -P interop/tsconfig.json scripts/demo-scenarios.ts",
+    "dev:all": "ts-node -P interop/tsconfig.json scripts/dev-all.ts",
+    "dev": "npm --prefix web run dev",
+    "web:dev": "npm --prefix web run dev",
+    "web:build": "npm --prefix web run build",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1"
+  }
+}

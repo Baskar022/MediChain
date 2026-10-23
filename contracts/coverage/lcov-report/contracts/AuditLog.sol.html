@@ -1,0 +1,776 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <title>Code coverage report for contracts\AuditLog.sol</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+<body>
+<div class='wrapper'>
+  <div class='pad1'>
+    <h1>
+      <a href="../index.html">all files</a> / <a href="index.html">contracts/</a> AuditLog.sol
+    </h1>
+    <div class='clearfix'>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">100% </span>
+        <span class="quiet">Statements</span>
+        <span class='fraction'>29/29</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">68.18% </span>
+        <span class="quiet">Branches</span>
+        <span class='fraction'>15/22</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">100% </span>
+        <span class="quiet">Functions</span>
+        <span class='fraction'>15/15</span>
+      </div>
+      <div class='fl pad1y space-right2'>
+        <span class="strong">100% </span>
+        <span class="quiet">Lines</span>
+        <span class='fraction'>31/31</span>
+      </div>
+    </div>
+  </div>
+  <div class='status-line high'></div>
+<pre><table class="coverage">
+<tr><td class="line-count quiet">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238</td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">25×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">24×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">24×</span>
+<span class="cline-any cline-yes">24×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">14×</span>
+<span class="cline-any cline-yes">14×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-yes">4×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">24×</span>
+<span class="cline-any cline-yes">24×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">24×</span>
+<span class="cline-any cline-yes">23×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">24×</span>
+<span class="cline-any cline-yes">22×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1×</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.24;
+&nbsp;
+import "@openzeppelin/contracts/access/AccessControl.sol";
+&nbsp;
+/**
+ * @title AuditLog
+ * @notice Centralized immutable audit trail for MediChain operations.
+ * @dev Emits verifiable on-chain events and logs for upload, view, grant, revoke, verify, and break-glass attempts.
+ */
+contract AuditLog is AccessControl {
+    bytes32 public constant RECORDER_ROLE = keccak256("RECORDER_ROLE");
+&nbsp;
+    struct AuditEntry {
+        bytes32 recordId;
+        bytes32 patientIdHash;
+        address actor;
+        address hospital;
+        string action;
+        bool authorized;
+        string details;
+        uint256 timestamp;
+    }
+&nbsp;
+    AuditEntry[] private _auditEntries;
+    mapping(bytes32 =&gt; uint256[]) private _recordAuditIndices;
+    mapping(bytes32 =&gt; uint256[]) private _patientAuditIndices;
+&nbsp;
+    event RecordUploaded(
+        bytes32 indexed recordId,
+        bytes32 indexed patientIdHash,
+        address indexed hospital,
+        address doctor,
+        uint256 version,
+        uint256 timestamp
+    );
+&nbsp;
+    event AccessGranted(
+        bytes32 indexed recordId,
+        bytes32 indexed patientIdHash,
+        address indexed hospital,
+        address grantedBy,
+        uint256 validUntil,
+        uint256 timestamp
+    );
+&nbsp;
+    event AccessRevoked(
+        bytes32 indexed recordId,
+        bytes32 indexed patientIdHash,
+        address indexed hospital,
+        address revokedBy,
+        uint256 timestamp
+    );
+&nbsp;
+    event AccessAttempted(
+        bytes32 indexed recordId,
+        bytes32 indexed patientIdHash,
+        address indexed accessor,
+        address hospital,
+        bool authorized,
+        string actionType,
+        string details,
+        uint256 timestamp
+    );
+&nbsp;
+    event EmergencyAccessTriggered(
+        bytes32 indexed recordId,
+        bytes32 indexed patientIdHash,
+        address indexed doctor,
+        address hospital,
+        string justification,
+        uint256 timestamp
+    );
+&nbsp;
+    event EmergencyAccessAcknowledged(
+        bytes32 indexed recordId,
+        bytes32 indexed patientIdHash,
+        address indexed patient,
+        uint256 timestamp
+    );
+&nbsp;
+    event IntegrityVerified(
+        bytes32 indexed recordId,
+        address indexed verifier,
+        bool matched,
+        uint256 timestamp
+    );
+&nbsp;
+    event RecordRevoked(
+        bytes32 indexed recordId,
+        address indexed revokedBy,
+        string reason,
+        uint256 timestamp
+    );
+&nbsp;
+    error UnauthorizedCaller();
+&nbsp;
+    modifier onlyRecorder() {
+        if (!hasRole(RECORDER_ROLE, msg.sender) &amp;&amp; !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)) {
+            revert UnauthorizedCaller();
+        }
+        _;
+    }
+&nbsp;
+    constructor(address initialAdmin) {
+        _grantRole(DEFAULT_ADMIN_ROLE, initialAdmin);
+        _grantRole(RECORDER_ROLE, initialAdmin);
+    }
+&nbsp;
+    function logRecordUploaded(
+        bytes32 recordId,
+        bytes32 patientIdHash,
+        address hospital,
+        address doctor,
+        uint256 version
+    ) external onlyRecorder {
+        _recordEntry(recordId, patientIdHash, doctor, hospital, "RECORD_UPLOADED", true, "");
+        emit RecordUploaded(recordId, patientIdHash, hospital, doctor, version, block.timestamp);
+    }
+&nbsp;
+    function logAccessGranted(
+        bytes32 recordId,
+        bytes32 patientIdHash,
+        address hospital,
+        address grantedBy,
+        uint256 validUntil
+    ) external <span class="missing-if-branch" title="else path not taken" >E</span>onlyRecorder {
+        _recordEntry(recordId, patientIdHash, grantedBy, hospital, "ACCESS_GRANTED", true, "");
+        emit AccessGranted(recordId, patientIdHash, hospital, grantedBy, validUntil, block.timestamp);
+    }
+&nbsp;
+    function logAccessRevoked(
+        bytes32 recordId,
+        bytes32 patientIdHash,
+        address hospital,
+        address revokedBy
+    ) external <span class="missing-if-branch" title="else path not taken" >E</span>onlyRecorder {
+        _recordEntry(recordId, patientIdHash, revokedBy, hospital, "ACCESS_REVOKED", true, "");
+        emit AccessRevoked(recordId, patientIdHash, hospital, revokedBy, block.timestamp);
+    }
+&nbsp;
+    function logAccessAttempted(
+        bytes32 recordId,
+        bytes32 patientIdHash,
+        address accessor,
+        address hospital,
+        bool authorized,
+        string calldata actionType,
+        string calldata details
+    ) external <span class="missing-if-branch" title="else path not taken" >E</span>onlyRecorder {
+        _recordEntry(recordId, patientIdHash, accessor, hospital, actionType, authorized, details);
+        emit AccessAttempted(recordId, patientIdHash, accessor, hospital, authorized, actionType, details, block.timestamp);
+    }
+&nbsp;
+    function logEmergencyAccessTriggered(
+        bytes32 recordId,
+        bytes32 patientIdHash,
+        address doctor,
+        address hospital,
+        string calldata justification
+    ) external <span class="missing-if-branch" title="else path not taken" >E</span>onlyRecorder {
+        _recordEntry(recordId, patientIdHash, doctor, hospital, "EMERGENCY_BREAK_GLASS", true, justification);
+        emit EmergencyAccessTriggered(recordId, patientIdHash, doctor, hospital, justification, block.timestamp);
+    }
+&nbsp;
+    function logEmergencyAccessAcknowledged(
+        bytes32 recordId,
+        bytes32 patientIdHash,
+        address patient
+    ) external <span class="missing-if-branch" title="else path not taken" >E</span>onlyRecorder {
+        _recordEntry(recordId, patientIdHash, patient, address(0), "EMERGENCY_ACKNOWLEDGED", true, "");
+        emit EmergencyAccessAcknowledged(recordId, patientIdHash, patient, block.timestamp);
+    }
+&nbsp;
+    function logIntegrityVerified(
+        bytes32 recordId,
+        address verifier,
+        bool matched
+    ) external <span class="missing-if-branch" title="else path not taken" >E</span>onlyRecorder {
+        _recordEntry(recordId, bytes32(0), verifier, address(0), "INTEGRITY_VERIFIED", matched, "");
+        emit IntegrityVerified(recordId, verifier, matched, block.timestamp);
+    }
+&nbsp;
+    function logRecordRevoked(
+        bytes32 recordId,
+        address revokedBy,
+        string calldata reason
+    ) external <span class="missing-if-branch" title="else path not taken" >E</span>onlyRecorder {
+        _recordEntry(recordId, bytes32(0), revokedBy, address(0), "RECORD_REVOKED", false, reason);
+        emit RecordRevoked(recordId, revokedBy, reason, block.timestamp);
+    }
+&nbsp;
+    function _recordEntry(
+        bytes32 recordId,
+        bytes32 patientIdHash,
+        address actor,
+        address hospital,
+        string memory action,
+        bool authorized,
+        string memory details
+    ) internal {
+        uint256 index = _auditEntries.length;
+        _auditEntries.push(AuditEntry({
+            recordId: recordId,
+            patientIdHash: patientIdHash,
+            actor: actor,
+            hospital: hospital,
+            action: action,
+            authorized: authorized,
+            details: details,
+            timestamp: block.timestamp
+        }));
+&nbsp;
+        if (recordId != bytes32(0)) {
+            _recordAuditIndices[recordId].push(index);
+        }
+        if (patientIdHash != bytes32(0)) {
+            _patientAuditIndices[patientIdHash].push(index);
+        }
+    }
+&nbsp;
+    function getAuditEntryCount() external view returns (uint256) {
+        return _auditEntries.length;
+    }
+&nbsp;
+    function getAuditEntry(uint256 index) external view returns (AuditEntry memory) {
+        return _auditEntries[index];
+    }
+&nbsp;
+    function getAuditIndicesByRecord(bytes32 recordId) external view returns (uint256[] memory) {
+        return _recordAuditIndices[recordId];
+    }
+&nbsp;
+    function getAuditIndicesByPatient(bytes32 patientIdHash) external view returns (uint256[] memory) {
+        return _patientAuditIndices[patientIdHash];
+    }
+}
+&nbsp;</pre></td></tr>
+</table></pre>
+<div class='push'></div><!-- for sticky footer -->
+</div><!-- /wrapper -->
+<div class='footer quiet pad2 space-top1 center small'>
+  Code coverage
+  generated by <a href="http://istanbul-js.org/" target="_blank">istanbul</a> at Wed Oct 21 2026 18:55:54 GMT+0530 (India Standard Time)
+</div>
+</div>
+<script src="../prettify.js"></script>
+<script>
+window.onload = function () {
+        if (typeof prettyPrint === 'function') {
+            prettyPrint();
+        }
+};
+</script>
+<script src="../sorter.js"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "name": "medichain-interop",
+  "version": "1.0.0",
+  "private": true,
+  "main": "adapters/ChainAdapter.ts",
+  "scripts": {
+    "test": "mocha -r ts-node/register \"test/**/*.test.ts\"",
+    "start:ledger": "ts-node ledger/server.ts",
+    "start:hub": "ts-node hub/server.ts",
+    "start:gateways": "ts-node gateway/launcher.ts"
+  },
+  "dependencies": {
+    "eciesjs": "^0.4.8",
+    "ethers": "^6.12.0",
+    "ws": "^8.17.0"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.16",
+    "@types/mocha": "^10.0.6",
+    "@types/node": "^20.12.7",
+    "@types/ws": "^8.5.10",
+    "chai": "^4.3.7",
+    "mocha": "^10.4.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}

@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Next.js build output
+.next/
+web/.next/
+out/
+build/
+dist/
+
+# Hardhat build artifacts & cache
+contracts/artifacts/
+contracts/cache/
+contracts/typechain-types/
+
+# Interoperability build output
+interop/dist/
+
+# Logs & Runtime
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Playwright & Testing reports
+test-results/
+playwright-report/
+.playwright/
+test-results.json
+
+# Environment variables & Local secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Operating System files
+.DS_Store
+Thumbs.db
