@@ -20,11 +20,11 @@
       ],
       "blockHash": "b485e861c73335ba5e68f11bb5cde6176d401cad496303b6ffee05f1f0e3ccc7",
       "validator": "METRO_LAB_AUTHORITY",
-      "signature": "304502200e91cb71d65bacf815d285951e84073d5059a2aac2a8a0b7d85d521891d1cd0b022100a704772f2846aa58732e797db1cee2ad316540ed46c045aa156f0e4a7b7d7200"
+      "signature": "3046022100eebca9b38371a69da24ceb719cb1d301d272de9da194954daa03446f5152373b022100910cc6b9450cbcbe185d704c92821e58afc06ccd548fe767f3304a223215f954"
     }
   ],
   "records": [],
   "consents": [],
   "audits": [],
-  "updatedAt": 1792726366544
+  "updatedAt": 1792746579236
 }
