@@ -51,7 +51,7 @@ export default function DoctorPatientDirectoryPage() {
       },
       {
         institution: "Metro Diagnostics Laboratory",
-        chain: "Network C (Fabric-Style Simulated 9000)",
+        chain: "Network C (Algorand TestNet)",
         categories: "Metabolic Panel, Pathology",
         count: 1,
         status: "Standing Push Active",
@@ -103,7 +103,7 @@ export default function DoctorPatientDirectoryPage() {
         created_at: Date.now() - 14 * 86400 * 1000,
         is_revoked: 0,
         hospital_name: "Metro Diagnostics Laboratory",
-        source_chain: "Network C (Fabric-Style Simulated 9000)",
+        source_chain: "Network C (Algorand TestNet)",
         is_foreign: true,
         verification_status: "VERIFIED_AUTHENTIC",
         doctor_name: "Dr. Alan Vance, PhD (Pathology)",

@@ -268,60 +268,126 @@ BE-Project/
 
 ---
 
-## 7. Quickstart & Execution Guide
+## 7. Quickstart, Setup & Execution Guide
 
 ### Prerequisites
-- **Node.js**: v18.0.0 or higher (v20+ recommended)
-- **npm**: v9.0.0 or higher
-- Operating System: Windows, macOS, or Linux
+- **Node.js**: `v18.0.0` or higher (`v20.x` or `v22.x` recommended)
+- **npm**: `v9.0.0` or higher
+- **Git** installed
+- **Operating System**: Windows (Native PowerShell / CMD or WSL2), macOS, or Linux
 
-### Installation
-Clone the repository and install all workspace dependencies:
-```bash
-git clone https://github.com/your-username/medichain.git
+---
+
+### One-Command Setup
+
+#### On Windows (PowerShell):
+```powershell
+# 1. Clone repository
+git clone https://github.com/medichain/interop.git
 cd BE-Project
+
+# 2. Install dependencies across all workspaces
 npm install
+
+# 3. Install Playwright browser binaries (for E2E testing)
+npx playwright install chromium
+
+# 4. Boot the complete multi-chain consortium (Clean Start)
+npm run start:clean
 ```
 
-### Running All Automated Test Suites
-Execute all 115 unit, smart contract, cryptographic, and cross-chain security tests:
+#### On macOS / Linux / WSL2:
 ```bash
+# 1. Clone repository
+git clone https://github.com/medichain/interop.git
+cd BE-Project
+
+# 2. Install dependencies across all workspaces
+npm install
+
+# 3. Install Playwright browser binaries (for E2E testing)
+npx playwright install chromium
+
+# 4. Boot the complete multi-chain consortium (Clean Start)
+npm run start:clean
+```
+
+The clinical web application will immediately be accessible at **[http://localhost:3000](http://localhost:3000)**.
+
+---
+
+### Operating Modes
+
+| Command | Purpose | When to Use |
+| :--- | :--- | :--- |
+| `npm run start:clean` | **Clean Start Mode:** Boots all 4 chains, gateways, and web portal with **zero** hardcoded entities or pre-seeded records. | **Live Examinations & Fresh Demos** |
+| `npm run seed:demo` | Seeds 3 default institutions, doctors, realistic patients, and records. | Optional quick testing without manual registration. |
+| `npm run status` | Prints real-time health, block height, and storage telemetry across all nodes. | Verifying system status at any point. |
+| `npm run reset:all` | Safely wipes SQLite tables, encrypted files, and ledger state to fresh zero state. | Resetting between presentation runs. |
+| `npm run dev:all` | Launches the full cluster with existing persisted disk state. | Continuing a previous evaluation session. |
+
+---
+
+### Running the Complete Automated Test Suite (126 Tests)
+
+MediChain maintains a 100% passing automated test suite across all architectural layers:
+
+```bash
+# 1. Run all unit and integration test suites (115 tests)
 npm run test:all
+
+# 2. Run Playwright browser End-to-End tests (11 tests in headless Chromium)
+npm run test:e2e
 ```
 
-To run individual test workspaces:
+To run individual test sub-suites:
 ```bash
-# Run 32 Hardhat EVM smart contract tests:
+# Smart contracts on Hardhat (32 tests):
 npm run contracts:test
 
-# Run 28 Web Crypto, SIWE, and AES-GCM tests:
+# Web client cryptography, SIWE & AES-GCM (28 tests):
 npm run crypto:test
 
-# Run 55 Cross-Chain Interoperability & Security tests:
+# Interoperability relayer, adapters & security (55 tests):
 npm run interop:test
-
-# Run Phase I-8 Security adversarial tests specifically:
-npm run test:security
 ```
 
-### Seeding Test Data
-Initialize default sovereign member institutions, fake patients, test clinical records, and the Federation Record Locator index:
-```bash
-npm run seed:interop
-```
+---
 
-### Running Cross-Chain Scenarios Demo
-Execute the complete multi-scenario demonstration runner:
-```bash
-npm run demo:scenarios
-```
+### Troubleshooting & Diagnostics
 
-### Launching the Full System
-To start the multi-network environment and web user interface:
-```bash
-npm run dev:all
-```
-Open **[http://localhost:3000](http://localhost:3000)** in your browser to access the clinical portal.
+#### 1. Port Collisions (Address Already in Use)
+If you previously had local processes running on ports `8545`, `8546`, `8547`, `9000`, or `3000`:
+- **On Windows (PowerShell):**
+  ```powershell
+  # Free port 3000 or blockchain ports:
+  Get-Process -Id (Get-NetTCPConnection -LocalPort 3000).OwningProcess -ErrorAction SilentlyContinue | Stop-Process -Force
+  ```
+- **On macOS / Linux:**
+  ```bash
+  lsof -ti :3000,8545,8546,8547,9000 | xargs kill -9
+  ```
+
+#### 2. Node.js SQLite Experimental Warning
+- **Symptom:** `ExperimentalWarning: SQLite is an experimental feature...`
+- **Explanation:** Node.js v20+ includes the high-performance native `node:sqlite` module. This is an informational runtime notice from Node.js and does not affect application stability or test results.
+
+#### 3. Playwright Browser Missing
+- **Symptom:** `browserType.launch: Executable doesn't exist`
+- **Solution:** Run `npx playwright install chromium` to fetch the local Chromium binary.
+
+---
+
+## 8. Evaluation & Examination Documentation
+
+Dedicated evaluation guides are available in the `/docs` directory:
+
+1. **[`/docs/CODE_TOUR.md`](file:///c:/Users/Baskar/Desktop/BE-Project/docs/CODE_TOUR.md)**: Folder-by-folder architectural map and the exact path of one request through the code (`UI` $\rightarrow$ `API` $\rightarrow$ `Gateway` $\rightarrow$ `Adapter` $\rightarrow$ `Chain`).
+2. **[`/docs/DEMO_SCRIPT.md`](file:///c:/Users/Baskar/Desktop/BE-Project/docs/DEMO_SCRIPT.md)**: Step-by-step 10-minute live demonstration flow from clean start, plus a *"What an examiner might try"* live attack checklist.
+3. **[`/docs/TECH_STACK.md`](file:///c:/Users/Baskar/Desktop/BE-Project/docs/TECH_STACK.md)**: Every language, version, and architectural rationale per network (Solidity, TypeScript, Web Crypto, SQLite).
+4. **[`/docs/INTEROP_EXPLAINED.md`](file:///c:/Users/Baskar/Desktop/BE-Project/docs/INTEROP_EXPLAINED.md)**: How EVM chains and Hyperledger Fabric exchange records step by step with Mermaid sequence diagrams.
+5. **[`/docs/VIVA_QA.md`](file:///c:/Users/Baskar/Desktop/BE-Project/docs/VIVA_QA.md)**: **45 comprehensive viva questions and rigorous answers** covering cryptography, consensus, and security.
+6. **[`/docs/test-report.md`](file:///c:/Users/Baskar/Desktop/BE-Project/docs/test-report.md)**: Automated test execution report detailing all 126 test cases.
 
 ---
 

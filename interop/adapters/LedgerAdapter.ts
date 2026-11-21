@@ -166,6 +166,53 @@ export class LedgerAdapter implements ChainAdapter {
     return MerkleTree.verifyProof(leaf, proof, rootHash);
   }
 
+  public async registerForeignProof(
+    recordId: string,
+    sourceChain: string,
+    sourceInstitution: string,
+    recordHash: string,
+    cipherHash: string,
+    storageRef: string,
+    attestationSignature: string
+  ): Promise<RecordRegistrationResult> {
+    const result = this.ledger.submitTransaction("TX_FOREIGN_RECORD_REGISTER", {
+      recordId,
+      sourceChain,
+      sourceInstitution,
+      recordHash,
+      cipherHash,
+      storageRef,
+      attestationSignature,
+    });
+
+    return {
+      recordId,
+      txHash: result.txId,
+      blockNumber: result.blockNumber,
+      timestamp: Math.floor(Date.now() / 1000),
+    };
+  }
+
+  public async healthCheck(): Promise<{ online: boolean; blockHeight: number; chainIdOrGenesis: string; latencyMs: number }> {
+    const start = Date.now();
+    try {
+      const block = this.ledger.getLatestBlock();
+      return {
+        online: true,
+        blockHeight: block.index,
+        chainIdOrGenesis: this.chainIdentifier,
+        latencyMs: Date.now() - start,
+      };
+    } catch {
+      return {
+        online: false,
+        blockHeight: 0,
+        chainIdOrGenesis: this.chainIdentifier,
+        latencyMs: Date.now() - start,
+      };
+    }
+  }
+
   public subscribeEvents(callback: (event: ChainEvent) => void): () => void {
     return this.ledger.subscribe(callback);
   }

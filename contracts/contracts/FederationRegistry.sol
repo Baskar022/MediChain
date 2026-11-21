@@ -6,18 +6,18 @@ import "@openzeppelin/contracts/utils/Pausable.sol";
 
 /**
  * @title FederationRegistry
- * @notice Neutral trust and directory registry for the MediChain Cross-Chain Interoperability Network.
- * @dev Deployed on the Federation Chain (Chain ID: 31340, Port 8547).
- * Stores member institutions (Hospitals, Labs, Clinics), their sovereign chain metadata,
- * gateway public keys, trust levels, and the privacy-preserving Record Locator Index.
- * ZERO Protected Health Information (PHI) is ever stored.
+ * @notice Neutral trust and directory registry for the Sovereign Cross-Chain Interoperability Network.
+ * @dev Deployed on Ethereum Sepolia (Chain ID: 11155111), owned by a Safe multisig (2-of-3).
+ * Governs institution lifecycles (APPLIED -> ACTIVE -> SUSPENDED -> REMOVED), gateway public keys,
+ * accredited document hashes, and the privacy-preserving Record Locator Index.
+ * ZERO Protected Health Information (PHI) is ever stored on-chain.
  */
 contract FederationRegistry is AccessControl, Pausable {
     bytes32 public constant FEDERATION_ADMIN_ROLE = keccak256("FEDERATION_ADMIN_ROLE");
 
     enum InstitutionType { Hospital, Lab, Clinic }
-    enum ChainType { Evm, PermissionedLedger }
-    enum MemberStatus { Inactive, Active, Suspended, Revoked }
+    enum ChainType { Evm, Algorand, Fabric, PermissionedLedger }
+    enum MemberStatus { Inactive, Active, Suspended, Removed, Applied }
 
     struct Institution {
         bytes32 institutionId;
@@ -27,8 +27,10 @@ contract FederationRegistry is AccessControl, Pausable {
         string chainId;
         string gatewayEndpoint;
         bytes gatewayPublicKey;
+        bytes32 licenseNumberHash;
+        bytes32 documentHash;     // IPFS hash of accredited verification documents
         MemberStatus status;
-        uint8 trustLevel; // 1 to 5 (5 highest)
+        uint8 trustLevel;         // 1 to 5 (5 highest)
         uint256 onboardedAt;
         uint256 updatedAt;
     }
@@ -52,6 +54,19 @@ contract FederationRegistry is AccessControl, Pausable {
     mapping(bytes32 => bool) private _patientOptOut;
 
     // Events
+    event InstitutionApplied(
+        bytes32 indexed institutionId,
+        string name,
+        InstitutionType institutionType,
+        ChainType chainType,
+        string chainId,
+        bytes32 licenseNumberHash,
+        bytes32 documentHash,
+        uint256 timestamp
+    );
+
+    event InstitutionApproved(bytes32 indexed institutionId, uint8 trustLevel, uint256 timestamp);
+
     event InstitutionOnboarded(
         bytes32 indexed institutionId,
         string name,
@@ -67,6 +82,7 @@ contract FederationRegistry is AccessControl, Pausable {
         bytes32 indexed institutionId,
         MemberStatus oldStatus,
         MemberStatus newStatus,
+        string reason,
         uint256 timestamp
     );
 
@@ -97,6 +113,7 @@ contract FederationRegistry is AccessControl, Pausable {
     error InvalidPublicKey();
     error UnauthorizedCaller();
     error PatientLocatorHidden();
+    error InvalidInstitutionStatus();
 
     modifier onlyFederationAdmin() {
         if (!hasRole(DEFAULT_ADMIN_ROLE, msg.sender) && !hasRole(FEDERATION_ADMIN_ROLE, msg.sender)) {
@@ -112,7 +129,81 @@ contract FederationRegistry is AccessControl, Pausable {
     }
 
     /**
-     * @notice Onboards an autonomous healthcare institution or lab into the Federation.
+     * @notice Allows an institution to apply for consortium membership by submitting credentials.
+     * Status moves to APPLIED pending Safe multisig review.
+     */
+    function applyInstitution(
+        bytes32 institutionId,
+        string calldata name,
+        InstitutionType instType,
+        ChainType chainType,
+        string calldata chainId,
+        string calldata gatewayEndpoint,
+        bytes calldata gatewayPublicKey,
+        bytes32 licenseNumberHash,
+        bytes32 documentHash
+    ) external whenNotPaused {
+        if (institutionId == bytes32(0)) revert InvalidInstitutionId();
+        if (gatewayPublicKey.length == 0) revert InvalidPublicKey();
+        if (_institutions[institutionId].institutionId != bytes32(0)) {
+            revert InstitutionAlreadyExists(institutionId);
+        }
+
+        _institutions[institutionId] = Institution({
+            institutionId: institutionId,
+            name: name,
+            institutionType: instType,
+            chainType: chainType,
+            chainId: chainId,
+            gatewayEndpoint: gatewayEndpoint,
+            gatewayPublicKey: gatewayPublicKey,
+            licenseNumberHash: licenseNumberHash,
+            documentHash: documentHash,
+            status: MemberStatus.Applied,
+            trustLevel: 1,
+            onboardedAt: block.timestamp,
+            updatedAt: block.timestamp
+        });
+
+        _institutionIds.push(institutionId);
+
+        emit InstitutionApplied(
+            institutionId,
+            name,
+            instType,
+            chainType,
+            chainId,
+            licenseNumberHash,
+            documentHash,
+            block.timestamp
+        );
+    }
+
+    /**
+     * @notice Approves a pending application. Executed via Safe multisig transaction.
+     */
+    function approveInstitution(bytes32 institutionId, uint8 trustLevel)
+        external
+        onlyFederationAdmin
+        whenNotPaused
+    {
+        Institution storage inst = _institutions[institutionId];
+        if (inst.institutionId == bytes32(0)) revert InstitutionNotFound(institutionId);
+        if (inst.status != MemberStatus.Applied && inst.status != MemberStatus.Suspended) {
+            revert InvalidInstitutionStatus();
+        }
+
+        MemberStatus oldStatus = inst.status;
+        inst.status = MemberStatus.Active;
+        inst.trustLevel = trustLevel > 5 ? 5 : (trustLevel == 0 ? 1 : trustLevel);
+        inst.updatedAt = block.timestamp;
+
+        emit InstitutionStatusUpdated(institutionId, oldStatus, MemberStatus.Active, "Approved by Safe multisig", block.timestamp);
+        emit InstitutionApproved(institutionId, inst.trustLevel, block.timestamp);
+    }
+
+    /**
+     * @notice Direct onboarding by federation admin (e.g., initial setup or pre-vetted member).
      */
     function onboardInstitution(
         bytes32 institutionId,
@@ -138,6 +229,8 @@ contract FederationRegistry is AccessControl, Pausable {
             chainId: chainId,
             gatewayEndpoint: gatewayEndpoint,
             gatewayPublicKey: gatewayPublicKey,
+            licenseNumberHash: bytes32(0),
+            documentHash: bytes32(0),
             status: MemberStatus.Active,
             trustLevel: trustLevel > 5 ? 5 : (trustLevel == 0 ? 1 : trustLevel),
             onboardedAt: block.timestamp,
@@ -159,7 +252,43 @@ contract FederationRegistry is AccessControl, Pausable {
     }
 
     /**
-     * @notice Updates the operational status of an institution (Active, Suspended, Revoked).
+     * @notice Suspends an active institution (e.g. compliance investigation).
+     */
+    function suspendInstitution(bytes32 institutionId, string calldata reason)
+        external
+        onlyFederationAdmin
+        whenNotPaused
+    {
+        Institution storage inst = _institutions[institutionId];
+        if (inst.institutionId == bytes32(0)) revert InstitutionNotFound(institutionId);
+
+        MemberStatus oldStatus = inst.status;
+        inst.status = MemberStatus.Suspended;
+        inst.updatedAt = block.timestamp;
+
+        emit InstitutionStatusUpdated(institutionId, oldStatus, MemberStatus.Suspended, reason, block.timestamp);
+    }
+
+    /**
+     * @notice Permanently removes an institution from the federation.
+     */
+    function removeInstitution(bytes32 institutionId, string calldata reason)
+        external
+        onlyFederationAdmin
+        whenNotPaused
+    {
+        Institution storage inst = _institutions[institutionId];
+        if (inst.institutionId == bytes32(0)) revert InstitutionNotFound(institutionId);
+
+        MemberStatus oldStatus = inst.status;
+        inst.status = MemberStatus.Removed;
+        inst.updatedAt = block.timestamp;
+
+        emit InstitutionStatusUpdated(institutionId, oldStatus, MemberStatus.Removed, reason, block.timestamp);
+    }
+
+    /**
+     * @notice Updates the operational status of an institution.
      */
     function updateInstitutionStatus(
         bytes32 institutionId,
@@ -172,11 +301,11 @@ contract FederationRegistry is AccessControl, Pausable {
         inst.status = newStatus;
         inst.updatedAt = block.timestamp;
 
-        emit InstitutionStatusUpdated(institutionId, oldStatus, newStatus, block.timestamp);
+        emit InstitutionStatusUpdated(institutionId, oldStatus, newStatus, "Status updated by admin", block.timestamp);
     }
 
     /**
-     * @notice Allows an institution or admin to rotate its gateway cryptographic public key.
+     * @notice Allows an institution to rotate its gateway cryptographic public key.
      */
     function updateGatewayPublicKey(
         bytes32 institutionId,
@@ -194,7 +323,6 @@ contract FederationRegistry is AccessControl, Pausable {
 
     /**
      * @notice Updates the Record Locator Index for a patient.
-     * Tells the federation that an institution holds a certain number of records of a given category.
      * ZERO clinical content is stored.
      */
     function updateRecordLocator(
@@ -204,19 +332,15 @@ contract FederationRegistry is AccessControl, Pausable {
         string calldata recordType,
         uint256 count
     ) external whenNotPaused {
-        Institution memory inst = _institutions[institutionId];
-        if (inst.institutionId == bytes32(0) || inst.status != MemberStatus.Active) {
-            revert InstitutionNotFound(institutionId);
+        if (globalPatientId == bytes32(0)) revert InvalidInstitutionId();
+        if (_institutions[institutionId].status != MemberStatus.Active) {
+            revert UnauthorizedCaller();
         }
 
         RecordLocatorEntry[] storage entries = _recordLocators[globalPatientId];
         bool found = false;
-
         for (uint256 i = 0; i < entries.length; i++) {
-            if (
-                entries[i].institutionId == institutionId &&
-                keccak256(bytes(entries[i].recordType)) == keccak256(bytes(recordType))
-            ) {
+            if (entries[i].institutionId == institutionId && keccak256(bytes(entries[i].recordType)) == keccak256(bytes(recordType))) {
                 entries[i].recordCount = count;
                 entries[i].lastUpdatedAt = block.timestamp;
                 found = true;
@@ -238,12 +362,25 @@ contract FederationRegistry is AccessControl, Pausable {
     }
 
     /**
-     * @notice Retrieves the Record Locator Index for a patient.
-     * Returns where records exist across institutions and sovereign chains.
+     * @notice Allows a patient to opt out / hide their record locator entry from federated search.
      */
-    function getRecordLocator(
-        bytes32 globalPatientId
-    ) external view returns (RecordLocatorEntry[] memory) {
+    function togglePatientOptOut(bytes32 globalPatientId, bool optOut) external whenNotPaused {
+        _patientOptOut[globalPatientId] = optOut;
+        emit PatientVisibilityToggled(globalPatientId, !optOut, block.timestamp);
+    }
+
+    /**
+     * @notice Compatibility helper for patient visibility.
+     */
+    function setPatientVisibility(bytes32 globalPatientId, bool isVisible) external whenNotPaused {
+        _patientOptOut[globalPatientId] = !isVisible;
+        emit PatientVisibilityToggled(globalPatientId, isVisible, block.timestamp);
+    }
+
+    /**
+     * @notice Queries the Record Locator Index for an authorized patient identifier.
+     */
+    function getRecordLocations(bytes32 globalPatientId) external view returns (RecordLocatorEntry[] memory) {
         if (_patientOptOut[globalPatientId]) {
             revert PatientLocatorHidden();
         }
@@ -251,46 +388,41 @@ contract FederationRegistry is AccessControl, Pausable {
     }
 
     /**
-     * @notice Allows a patient to opt out / hide their record locator index across the federation.
+     * @notice Compatibility alias for getRecordLocations.
      */
-    function setPatientVisibility(bytes32 globalPatientId, bool isVisible) external {
-        _patientOptOut[globalPatientId] = !isVisible;
-        emit PatientVisibilityToggled(globalPatientId, isVisible, block.timestamp);
+    function getRecordLocator(bytes32 globalPatientId) external view returns (RecordLocatorEntry[] memory) {
+        if (_patientOptOut[globalPatientId]) {
+            revert PatientLocatorHidden();
+        }
+        return _recordLocators[globalPatientId];
     }
 
-    /**
-     * @notice Checks if an institution is currently active in the Federation.
-     */
-    function isInstitutionActive(bytes32 institutionId) external view returns (bool) {
-        return _institutions[institutionId].status == MemberStatus.Active;
+    function isPatientOptedOut(bytes32 globalPatientId) external view returns (bool) {
+        return _patientOptOut[globalPatientId];
     }
 
-    /**
-     * @notice Returns details of a specific member institution.
-     */
     function getInstitution(bytes32 institutionId) external view returns (Institution memory) {
         Institution memory inst = _institutions[institutionId];
         if (inst.institutionId == bytes32(0)) revert InstitutionNotFound(institutionId);
         return inst;
     }
 
-    /**
-     * @notice Returns list of all member institution IDs.
-     */
+    function isInstitutionActive(bytes32 institutionId) external view returns (bool) {
+        return _institutions[institutionId].status == MemberStatus.Active;
+    }
+
     function getAllInstitutionIds() external view returns (bytes32[] memory) {
         return _institutionIds;
     }
 
-    /**
-     * @notice Emergency freeze on federation operations.
-     */
+    function getInstitutionCount() external view returns (uint256) {
+        return _institutionIds.length;
+    }
+
     function pause() external onlyFederationAdmin {
         _pause();
     }
 
-    /**
-     * @notice Resumes federation operations.
-     */
     function unpause() external onlyFederationAdmin {
         _unpause();
     }

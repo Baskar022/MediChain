@@ -129,13 +129,15 @@ export function Header() {
             className="flex items-center space-x-2 bg-[#F6F4EF] hover:bg-[#EAE6DD] border border-[#E4DFD5] px-3 py-1.5 rounded-sm text-xs transition-colors"
             title="Click to switch active sovereign hospital chain"
           >
-            <div className={`w-2 h-2 rounded-full ${activeNetwork.type === "EVM" ? "bg-emerald-500" : "bg-purple-500"}`} />
+            <div className={`w-2 h-2 rounded-full ${activeNetwork.type === "EVM" ? "bg-emerald-500" : activeNetwork.type === "ALGORAND" ? "bg-amber-500" : "bg-purple-500"}`} />
             <span className="text-[#0F1F2E] font-medium truncate max-w-[150px] sm:max-w-none">
               {activeNetwork.name}
             </span>
             <span className={`hidden sm:inline-block px-1.5 py-0.5 rounded-sm text-[10px] font-mono font-semibold ${
               activeNetwork.type === "EVM"
                 ? "bg-blue-50 text-blue-700 border border-blue-200"
+                : activeNetwork.type === "ALGORAND"
+                ? "bg-amber-50 text-amber-700 border border-amber-200"
                 : "bg-purple-50 text-purple-700 border border-purple-200"
             }`}>
               {activeNetwork.badgeLabel}
@@ -159,16 +161,16 @@ export function Header() {
                     activeNetwork.id === net.id ? "bg-[#F6F4EF] border-l-2 border-[#1F7A7A]" : ""
                   }`}
                 >
-                  <div className={`w-2 h-2 rounded-full mt-1 shrink-0 ${net.type === "EVM" ? "bg-emerald-500" : "bg-purple-500"}`} />
+                  <div className={`w-2 h-2 rounded-full mt-1 shrink-0 ${net.type === "EVM" ? "bg-emerald-500" : net.type === "ALGORAND" ? "bg-amber-500" : "bg-purple-500"}`} />
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-[#0F1F2E] flex items-center justify-between">
                       <span className="truncate">{net.name}</span>
                       {activeNetwork.id === net.id && <Check className="w-3.5 h-3.5 text-[#1F7A7A] shrink-0 ml-1" />}
                     </div>
                     <div className="text-[10px] text-[#6B7A88] mt-0.5 flex items-center space-x-2 font-mono">
-                      <span>Port {net.port}</span>
+                      <span>{net.port ? `Port ${net.port}` : "Public RPC"}</span>
                       <span>&bull;</span>
-                      <span>{net.type === "EVM" ? `Chain ${net.chainId}` : "Permissioned Ledger"}</span>
+                      <span>{net.type === "EVM" ? `Chain ${net.chainId}` : net.type === "ALGORAND" ? "Algorand TestNet" : "Permissioned Ledger"}</span>
                     </div>
                   </div>
                 </button>

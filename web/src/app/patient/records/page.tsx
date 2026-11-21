@@ -46,6 +46,7 @@ export default function PatientRecordsPage() {
   // Cross-chain features state
   const [showLocatorPanel, setShowLocatorPanel] = useState(true);
   const [isLocatorPublic, setIsLocatorPublic] = useState(true);
+  const [liveAlerts, setLiveAlerts] = useState<any[]>([]);
   const [hasEmergencyNotice, setHasEmergencyNotice] = useState(true);
 
   // Pre-loaded realistic records for Patient Alice Vance
@@ -91,8 +92,8 @@ export default function PatientRecordsPage() {
       is_revoked: 0,
       hospital_name: "Metro Diagnostics Laboratory",
       doctor_name: "Dr. Alan Vance, PhD (Pathology)",
-      chain_origin: "Network C (Metro Diagnostics - Fabric-Style Simulated 9000)",
-      chain_type: "CUSTOM_LEDGER",
+      chain_origin: "Network C (Metro Diagnostics - Algorand TestNet)",
+      chain_type: "ALGORAND",
       verification_status: "VERIFIED_AUTHENTIC",
       mockDecrypted: {
         testType: "Comprehensive Metabolic & Lipid Panel",
@@ -170,7 +171,30 @@ export default function PatientRecordsPage() {
     }
 
     fetchRecords();
+
+    // Fetch live emergency alerts
+    if (account) {
+      fetch(`/api/emergency/alerts?patientId=${account}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data && data.alerts && data.alerts.length > 0) {
+            setLiveAlerts(data.alerts.filter((a: any) => a.is_read === 0));
+          }
+        })
+        .catch(() => {});
+    }
   }, [account]);
+
+  const handleAcknowledgeAlert = async (alertId: string) => {
+    try {
+      await fetch("/api/emergency/alerts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ alertId }),
+      });
+      setLiveAlerts((prev) => prev.filter((a) => a.id !== alertId));
+    } catch {}
+  };
 
   const handleOpenDetails = (rec: any) => {
     setActiveDetailRecord(rec);
@@ -253,8 +277,43 @@ export default function PatientRecordsPage() {
         </div>
       </div>
 
-      {/* Emergency Break-Glass In-App Alert */}
-      {hasEmergencyNotice && (
+      {/* Live Emergency Break-Glass In-App Alerts */}
+      {liveAlerts.length > 0 ? (
+        <div className="space-y-3">
+          {liveAlerts.map((alt) => (
+            <div key={alt.id} className="bg-red-50 border border-red-200 rounded-xl p-5 text-red-950 shadow-sm relative">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start space-x-3.5">
+                  <span className="p-2 bg-red-100 border border-red-300 rounded-lg text-red-700 mt-0.5">
+                    <AlertOctagon className="w-5 h-5" />
+                  </span>
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex items-center space-x-2">
+                      <span className="font-semibold text-sm text-red-900">{alt.title}</span>
+                      <span className="px-2 py-0.5 bg-red-200 text-red-800 rounded-full font-mono text-[10px] font-bold">
+                        Active 24h Trauma Override
+                      </span>
+                    </div>
+                    <p className="text-red-800 leading-relaxed max-w-3xl">{alt.message}</p>
+                    <div className="flex items-center space-x-4 pt-1 font-mono text-[11px] text-red-700">
+                      <span>Triggered: {new Date(alt.created_at).toLocaleString()}</span>
+                      <span>&bull;</span>
+                      <span>Enqueued in Federation Compliance Audit</span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => handleAcknowledgeAlert(alt.id)}
+                  className="text-red-600 hover:text-red-800 text-xs px-3 py-1.5 rounded-lg border border-red-200 bg-white hover:bg-red-50 transition shadow-xs shrink-0 font-medium"
+                >
+                  Acknowledge
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : hasEmergencyNotice && account && account.toLowerCase() === "0x90f79bf6eb2c4f870365e785982e1f101e93b906" ? (
         <div className="bg-red-50 border border-red-200 rounded-xl p-5 text-red-950 shadow-sm relative">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start space-x-3.5">
@@ -290,7 +349,7 @@ export default function PatientRecordsPage() {
             </button>
           </div>
         </div>
-      )}
+      ) : null}
 
       {/* "Where My Records Are" - Record Locator Index */}
       <div className="bg-white border border-medichain-border rounded-xl shadow-card overflow-hidden">
@@ -405,7 +464,7 @@ export default function PatientRecordsPage() {
                     </td>
                     <td className="py-3 px-3">
                       <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-purple-50 text-purple-700 border border-purple-200 font-semibold">
-                        FABRIC-STYLE SIMULATED (9000)
+                        ALGORAND TESTNET (416002)
                       </span>
                     </td>
                     <td className="py-3 px-3 font-mono text-[11px] text-slate-700">

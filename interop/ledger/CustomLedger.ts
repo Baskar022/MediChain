@@ -87,6 +87,7 @@ export class MerkleTree {
 
 export type TransactionType =
   | "TX_RECORD_REGISTER"
+  | "TX_FOREIGN_RECORD_REGISTER"
   | "TX_CONSENT_GRANT"
   | "TX_CONSENT_REVOKE"
   | "TX_EMERGENCY_OVERRIDE"

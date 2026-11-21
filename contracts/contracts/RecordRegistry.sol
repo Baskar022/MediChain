@@ -318,6 +318,12 @@ contract RecordRegistry is AccessControl, Pausable, ReentrancyGuard {
         revert UnauthorizedIssuer();
     }
 
+    /**
+     * @notice Cryptographically verifies an ECDSA signature over the clinical recordHash.
+     * @dev Enforces EIP-191 personal sign prefixing (`\x19Ethereum Signed Message:\n32`)
+     * to eliminate signature replay across raw Ethereum transactions.
+     * Reverts with InvalidIssuerSignature if recovered address != expectedSigner.
+     */
     function _verifySignature(bytes32 hash, bytes calldata signature, address expectedSigner) internal pure {
         bytes32 ethHash = MessageHashUtils.toEthSignedMessageHash(hash);
         address recovered = ethHash.recover(signature);

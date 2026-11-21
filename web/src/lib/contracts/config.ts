@@ -17,13 +17,16 @@ export const CONTRACT_ADDRESSES = {
 };
 
 export const NETWORK_CONFIG = {
-  chainId: Number(process.env.NEXT_PUBLIC_CHAIN_ID || 31337),
-  chainIdHex: "0x7a69", // 31337 in hex
-  chainName: "MediChain Local Consortium",
-  rpcUrl: process.env.NEXT_PUBLIC_RPC_URL || "http://127.0.0.1:8545",
+  chainId: Number(process.env.NEXT_PUBLIC_CHAIN_ID || 11155111),
+  chainIdHex: "0xaa36a7", // 11155111 in hex (Sepolia)
+  chainName: "Ethereum Sepolia (MediChain Hub)",
+  rpcUrl:
+    process.env.NEXT_PUBLIC_RPC_URL ||
+    process.env.NEXT_PUBLIC_SEPOLIA_RPC ||
+    "https://ethereum-sepolia-rpc.publicnode.com",
   nativeCurrency: {
-    name: "ETH",
-    symbol: "ETH",
+    name: "Sepolia ETH",
+    symbol: "SEP",
     decimals: 18,
   },
 };

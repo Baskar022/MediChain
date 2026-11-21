@@ -61,7 +61,7 @@ export default function PatientConsentsPage() {
           consentId: "0x9921bc...consent_lab_push",
           hospitalName: "Metro Diagnostics Laboratory",
           hospitalWallet: "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f",
-          chain: "Network C (Fabric-Style Simulated 9000)",
+          chain: "Network C (Algorand TestNet)",
           sourceChain: "Network C (Metro Diagnostics)",
           scope: "Standing Consent: Metabolic Panel & Blood Lab Results",
           recordTitle: "Standing Push Authorization to Ordering Hospitals",

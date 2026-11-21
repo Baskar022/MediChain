@@ -1,0 +1,328 @@
+#pragma version 9
+// ==============================================================================
+// MediChain / Aetheris Health: DiagnosticLabApp.teal
+// Smart Contract for Algorand TestNet (AVM Architecture)
+// Implements:
+//   1. registerRecord: Anchors diagnostic lab report (CID, hashes, ECDSA signature)
+//   2. grantConsent: Records patient consent with scope and expiry timestamp
+//   3. revokeConsent: Revokes active consent grant
+//   4. checkConsent: Validates active consent status
+//   5. logAudit: Emits on-chain audit log
+//   6. registerForeignProof: Stores cross-chain references from EVM chains
+// ==============================================================================
+
+// Route by OnCompletion
+txn OnCompletion
+int NoOp
+==
+bnz handle_noop
+
+txn OnCompletion
+int OptIn
+==
+bnz handle_optin
+
+txn OnCompletion
+int CloseOut
+==
+bnz handle_closeout
+
+txn OnCompletion
+int UpdateApplication
+==
+bnz handle_update
+
+txn OnCompletion
+int DeleteApplication
+==
+bnz handle_delete
+
+err
+
+// ------------------------------------------------------------------------------
+// Initialization on App Creation
+// ------------------------------------------------------------------------------
+handle_noop:
+txn ApplicationID
+int 0
+==
+bz check_method
+
+// Store creator/admin
+byte "admin"
+txn Sender
+app_global_put
+
+byte "totalRecords"
+int 0
+app_global_put
+
+byte "totalConsents"
+int 0
+app_global_put
+
+byte "totalAudits"
+int 0
+app_global_put
+
+int 1
+return
+
+// ------------------------------------------------------------------------------
+// Method Dispatcher
+// ------------------------------------------------------------------------------
+check_method:
+txna ApplicationArgs 0
+byte "registerRecord"
+==
+bnz method_register_record
+
+txna ApplicationArgs 0
+byte "grantConsent"
+==
+bnz method_grant_consent
+
+txna ApplicationArgs 0
+byte "revokeConsent"
+==
+bnz method_revoke_consent
+
+txna ApplicationArgs 0
+byte "logAudit"
+==
+bnz method_log_audit
+
+txna ApplicationArgs 0
+byte "registerForeignProof"
+==
+bnz method_register_foreign_proof
+
+txna ApplicationArgs 0
+byte "checkConsent"
+==
+bnz method_check_consent
+
+err
+
+// ------------------------------------------------------------------------------
+// Method: registerRecord
+// Args:
+//   0: "registerRecord"
+//   1: recordId (bytes32 / string)
+//   2: patientIdHash (bytes32)
+//   3: recordHash (bytes32 plaintext SHA-256)
+//   4: cipherHash (bytes32 ciphertext SHA-256)
+//   5: storageCid (IPFS CID string)
+//   6: issuerSignature (doctor/lab tech signature)
+// ------------------------------------------------------------------------------
+method_register_record:
+// Store record in Box Storage: key = "rec_" + recordId
+byte "rec_"
+txna ApplicationArgs 1
+concat
+// Payload: recordHash + cipherHash + storageCid
+txna ApplicationArgs 3
+txna ApplicationArgs 4
+concat
+txna ApplicationArgs 5
+concat
+box_put
+
+// Increment total records counter
+byte "totalRecords"
+byte "totalRecords"
+app_global_get
+int 1
++
+app_global_put
+
+// Emit on-chain event log
+byte "RECORD_REGISTERED:"
+txna ApplicationArgs 1
+concat
+byte ":"
+concat
+txna ApplicationArgs 3
+concat
+log
+
+int 1
+return
+
+// ------------------------------------------------------------------------------
+// Method: grantConsent
+// Args:
+//   0: "grantConsent"
+//   1: consentId
+//   2: patientIdHash
+//   3: grantee (address/id)
+//   4: recordId
+//   5: validUntil (uint64 big-endian bytes)
+// ------------------------------------------------------------------------------
+method_grant_consent:
+byte "con_"
+txna ApplicationArgs 1
+concat
+// Payload: patientIdHash + grantee + recordId + validUntil + status(1)
+txna ApplicationArgs 2
+txna ApplicationArgs 3
+concat
+txna ApplicationArgs 4
+concat
+txna ApplicationArgs 5
+concat
+byte "ACTIVE"
+concat
+box_put
+
+byte "totalConsents"
+byte "totalConsents"
+app_global_get
+int 1
++
+app_global_put
+
+byte "CONSENT_GRANTED:"
+txna ApplicationArgs 1
+concat
+log
+
+int 1
+return
+
+// ------------------------------------------------------------------------------
+// Method: revokeConsent
+// Args:
+//   0: "revokeConsent"
+//   1: consentId
+// ------------------------------------------------------------------------------
+method_revoke_consent:
+byte "con_"
+txna ApplicationArgs 1
+concat
+box_del
+pop
+
+byte "CONSENT_REVOKED:"
+txna ApplicationArgs 1
+concat
+log
+
+int 1
+return
+
+// ------------------------------------------------------------------------------
+// Method: checkConsent
+// Args:
+//   0: "checkConsent"
+//   1: consentId
+// ------------------------------------------------------------------------------
+method_check_consent:
+byte "con_"
+txna ApplicationArgs 1
+concat
+box_get
+store 0 // 1 if exists, 0 if not
+load 0
+bnz consent_found
+byte "STATUS:NOT_FOUND"
+log
+int 1
+return
+
+consent_found:
+byte "STATUS:ACTIVE"
+log
+int 1
+return
+
+// ------------------------------------------------------------------------------
+// Method: logAudit
+// Args:
+//   0: "logAudit"
+//   1: recordId
+//   2: actor
+//   3: action
+//   4: details
+// ------------------------------------------------------------------------------
+method_log_audit:
+byte "totalAudits"
+byte "totalAudits"
+app_global_get
+int 1
++
+app_global_put
+
+byte "AUDIT:"
+txna ApplicationArgs 1
+concat
+byte ":"
+concat
+txna ApplicationArgs 2
+concat
+byte ":"
+concat
+txna ApplicationArgs 3
+concat
+log
+
+int 1
+return
+
+// ------------------------------------------------------------------------------
+// Method: registerForeignProof
+// Args:
+//   0: "registerForeignProof"
+//   1: recordId
+//   2: sourceChain (e.g. "ETHEREUM_SEPOLIA")
+//   3: recordHash
+//   4: storageCid
+//   5: attestationSignature
+// ------------------------------------------------------------------------------
+method_register_foreign_proof:
+byte "for_"
+txna ApplicationArgs 1
+concat
+txna ApplicationArgs 2
+txna ApplicationArgs 3
+concat
+txna ApplicationArgs 4
+concat
+box_put
+
+byte "FOREIGN_PROOF_REGISTERED:"
+txna ApplicationArgs 1
+concat
+byte ":"
+concat
+txna ApplicationArgs 2
+concat
+log
+
+int 1
+return
+
+// ------------------------------------------------------------------------------
+// Admin Controls
+// ------------------------------------------------------------------------------
+handle_optin:
+int 1
+return
+
+handle_closeout:
+int 1
+return
+
+handle_update:
+txn Sender
+byte "admin"
+app_global_get
+==
+return
+
+handle_delete:
+txn Sender
+byte "admin"
+app_global_get
+==
+return

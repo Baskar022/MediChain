@@ -1,0 +1,31 @@
+{
+  "resourceType": "DiagnosticReport",
+  "id": "rec_synth_604b45cbe87e",
+  "status": "final",
+  "category": "RADIOLOGY",
+  "code": {
+    "system": "http://loinc.org",
+    "code": "18748-4",
+    "display": "High-Resolution Diagnostic Chest CT & Thoracic Imaging"
+  },
+  "subject": {
+    "globalPatientId": "0x7ebf7d051c1514a03edaa843aedb1724a254eb6e44b7cd4a574061119e14751e",
+    "pseudonym": "0x5c53a7850ecff1c15abd91da011e37b9b1395bdbdcd48953b427c4e3e0b95a00",
+    "displayName": "Alice M. Carter (Synthetic)"
+  },
+  "effectiveDateTime": "2026-11-21T00:32:55.226Z",
+  "issued": "2026-11-21T00:32:55.226Z",
+  "performer": {
+    "institutionId": "hospital-sepolia-01",
+    "institutionName": "City General Hospital",
+    "chainIdentifier": "11155111",
+    "practitionerName": "Dr. Evelyn Reed, MD",
+    "practitionerWallet": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+  },
+  "conclusion": "Lungs are clear bilaterally. No pulmonary consolidation, pleural effusion, or pneumothorax.",
+  "criticalAlert": false,
+  "notes": [
+    "Scout and axial helical CT images obtained at 1.25mm slice thickness without IV contrast.",
+    "Mediastinal contours are normal."
+  ]
+}

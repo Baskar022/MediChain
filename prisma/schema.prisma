@@ -1,0 +1,244 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum InstitutionType {
+  HOSPITAL
+  LAB
+  CLINIC
+}
+
+enum ChainType {
+  EVM
+  ALGORAND
+  FABRIC
+  PERMISSIONED_LEDGER
+}
+
+enum MemberStatus {
+  APPLIED
+  ACTIVE
+  SUSPENDED
+  REMOVED
+}
+
+enum StaffRole {
+  DOCTOR
+  LAB_TECH
+  STAFF
+  INSTITUTION_ADMIN
+}
+
+enum AccessScope {
+  SpecificRecord
+  AllRecords
+}
+
+enum AccessStatus {
+  PENDING
+  REQUESTED
+  CONSENT_GIVEN
+  RELEASED
+  VERIFIED
+  AVAILABLE
+  DENIED
+  REVOKED
+}
+
+model Institution {
+  id                String          @id // Keccak256 hash
+  name              String
+  institutionType   InstitutionType @default(HOSPITAL)
+  chainType         ChainType       @default(EVM)
+  chainId           String
+  rpcPort           Int             @default(8545)
+  gatewayPublicKey  String
+  gatewayPrivateKey String?
+  gatewayEndpoint   String
+  status            MemberStatus    @default(ACTIVE)
+  trustLevel        Int             @default(3)
+  licenseNumberHash String?
+  documentHash      String?         // IPFS CID of accreditation papers
+  rejectionReason   String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  staff             StaffMember[]
+  patients          Patient[]
+  records           MedicalRecord[]
+  recordLocators    RecordLocator[]
+
+  @@map("institutions")
+}
+
+model StaffMember {
+  id               String      @id
+  hospitalWallet   String
+  name             String
+  specialty        String      @default("General Medicine")
+  role             StaffRole   @default(DOCTOR)
+  walletAddress    String      @unique
+  privateKey       String?
+  licenseNumber    String?
+  isActive         Boolean     @default(true)
+  revocationReason String?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  institutionId    String?
+  institution      Institution? @relation(fields: [institutionId], references: [id], onDelete: SetNull)
+
+  @@index([hospitalWallet])
+  @@map("staff_members")
+}
+
+model Patient {
+  globalPatientId   String   @id // Keccak256 pseudonymous identifier (Zero PII)
+  localPseudonym    String
+  name              String   // Encrypted or synthetic name
+  idSecret          String   // Kept isolated; hashed with federation salt
+  hospitalId        String
+  walletAddress     String   @unique
+  encryptedKeystore String?  // Password-encrypted JSON keystore
+  verifiedByStaff   String?  // Registrar staff wallet who verified identity in-person
+  bindingSignature  String?  // Patient signature over link message
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  institution       Institution? @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  records           MedicalRecord[]
+  accessRequests    AccessRequest[]
+
+  @@index([hospitalId])
+  @@index([localPseudonym])
+  @@map("patients")
+}
+
+model MedicalRecord {
+  recordId          String      @id // Unique record ID
+  patientPseudonym  String
+  recordType        String      // CARDIOLOGY, HEMATOLOGY, RADIOLOGY, etc.
+  recordHash        String      // Plaintext SHA-256 digest
+  cipherHash        String      // Ciphertext SHA-256 digest
+  issuerHospital    String
+  issuerDoctor      String
+  issuerSignature   String      // ECDSA signature over recordHash
+  storagePath       String      // Local path or IPFS reference
+  storageRef        String?     // ipfs://Qm...
+  fileName          String?
+  mimeType          String?
+  fileSize          Int?
+  version           Int         @default(1)
+  previousRecordId  String?
+  isRevoked         Boolean     @default(false)
+  revocationReason  String?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  patientId         String?
+  patient           Patient?    @relation(fields: [patientId], references: [globalPatientId], onDelete: SetNull)
+  institutionId     String?
+  institution       Institution? @relation(fields: [institutionId], references: [id], onDelete: SetNull)
+
+  wrappedKeys       WrappedKey[]
+  transfers         TransferEvent[]
+
+  @@index([patientPseudonym])
+  @@index([issuerHospital])
+  @@index([recordHash])
+  @@map("medical_records")
+}
+
+model WrappedKey {
+  id              String        @id @default(uuid())
+  recordId        String
+  recipientWallet String
+  wrappedKeyHex   String        // ECIES encrypted AES symmetric key
+  createdAt       DateTime      @default(now())
+
+  record          MedicalRecord @relation(fields: [recordId], references: [recordId], onDelete: Cascade)
+
+  @@unique([recordId, recipientWallet])
+  @@map("wrapped_keys")
+}
+
+model RecordLocator {
+  id              String      @id @default(uuid())
+  globalPatientId String
+  institutionId   String
+  institutionName String
+  chainIdentifier String
+  chainType       ChainType   @default(EVM)
+  recordType      String
+  recordCount     Int         @default(1)
+  updatedAt       DateTime    @updatedAt
+
+  institution     Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  @@unique([globalPatientId, institutionId, recordType])
+  @@index([globalPatientId])
+  @@map("record_locators")
+}
+
+model AccessRequest {
+  id                 String       @id
+  patientPseudonym   String
+  recordId           String?
+  requestingHospital String
+  requestingDoctor   String
+  reason             String
+  scope              AccessScope  @default(SpecificRecord)
+  status             AccessStatus @default(PENDING)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  patientId          String?
+  patient            Patient?     @relation(fields: [patientId], references: [globalPatientId], onDelete: SetNull)
+
+  @@index([patientPseudonym])
+  @@index([requestingHospital])
+  @@map("access_requests")
+}
+
+model TransferEvent {
+  id                  String   @id @default(uuid())
+  messageId           String   @unique
+  sourceHospital      String
+  destinationHospital String
+  patientPseudonym    String
+  recordId            String
+  status              String   @default("DELIVERED") // EN_ROUTE, DELIVERED, REJECTED
+  payloadHash         String
+  envelopeSignature   String
+  timestamp           DateTime @default(now())
+
+  record              MedicalRecord @relation(fields: [recordId], references: [recordId], onDelete: Cascade)
+
+  @@index([sourceHospital])
+  @@index([destinationHospital])
+  @@map("transfer_events")
+}
+
+model AuditEntry {
+  id               String   @id @default(uuid())
+  recordId         String
+  patientPseudonym String
+  actorWallet      String
+  actionType       String   // UPLOAD, REQUEST, GRANT, REVOKE, VERIFY, EMERGENCY_OVERRIDE
+  sourceChain      String
+  destinationChain String?
+  details          String
+  blockNumber      Int?
+  txHash           String?
+  timestamp        DateTime @default(now())
+
+  @@index([recordId])
+  @@index([patientPseudonym])
+  @@index([actorWallet])
+  @@map("audit_entries")
+}

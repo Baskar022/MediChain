@@ -11,7 +11,8 @@
     "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
     "deploy:all": "ts-node scripts/deploy-all-chains.ts",
     "deploy:hardhat": "hardhat run scripts/deploy.ts --network hardhat",
-    "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia"
+    "deploy:sepolia": "hardhat run scripts/deploy-sepolia.ts --network sepolia",
+    "deploy:amoy": "hardhat run scripts/deploy-amoy.ts --network amoy"
   },
   "keywords": [
     "blockchain",

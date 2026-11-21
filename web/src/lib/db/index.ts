@@ -18,6 +18,8 @@ export interface RecordEntity {
   file_size: number;
   version: number;
   previous_record_id?: string | null;
+  storage_ref?: string | null;
+  ipfs_cid?: string | null;
   created_at: number;
   is_revoked: number;
 }
@@ -47,15 +49,18 @@ export interface InstitutionEntity {
   id: string;
   name: string;
   institution_type: "HOSPITAL" | "LAB" | "CLINIC";
-  chain_type: "EVM" | "PERMISSIONED_LEDGER";
+  chain_type: "EVM" | "ALGORAND" | "FABRIC" | "PERMISSIONED_LEDGER";
   chain_id: string;
   rpc_port: number;
   gateway_public_key: string;
   gateway_private_key?: string;
   gateway_endpoint: string;
-  status: "ACTIVE" | "SUSPENDED" | "REVOKED";
+  status: "APPLIED" | "ACTIVE" | "SUSPENDED" | "REMOVED" | "REVOKED";
   trust_level: number;
   created_at: number;
+  license_number_hash?: string;
+  document_hash?: string;
+  rejection_reason?: string;
 }
 
 export interface StaffEntity {
@@ -63,10 +68,12 @@ export interface StaffEntity {
   hospital_wallet: string;
   name: string;
   specialty: string;
-  role: "DOCTOR" | "STAFF";
+  role: "DOCTOR" | "LAB_TECH" | "STAFF" | "INSTITUTION_ADMIN";
   wallet_address: string;
   private_key?: string;
+  license_number?: string;
   is_active: number;
+  revocation_reason?: string;
   created_at: number;
 }
 
@@ -78,6 +85,38 @@ export interface PatientEntity {
   hospital_id: string;
   wallet_address: string;
   encrypted_keystore?: string;
+  verified_by_staff?: string;
+  binding_signature?: string;
+  created_at: number;
+}
+
+export interface EmergencyAccessEntity {
+  id: string;
+  access_id: string;
+  patient_id_hash: string;
+  doctor_name: string;
+  doctor_wallet: string;
+  hospital_id: string;
+  justification: string;
+  emergency_level: string;
+  accessed_at: number;
+  expires_at: number;
+  review_status: "PENDING_REVIEW" | "JUSTIFICATION_VALIDATED" | "FLAGGED_FOR_INQUIRY";
+  admin_notes?: string;
+  reviewed_at?: number;
+  reviewed_by?: string;
+  emergency_contact_phone?: string;
+  critical_summary_json: string;
+}
+
+export interface PatientAlertEntity {
+  id: string;
+  patient_id_hash: string;
+  alert_type: string;
+  title: string;
+  message: string;
+  metadata_json?: string;
+  is_read: number;
   created_at: number;
 }
 
@@ -119,6 +158,8 @@ class DatabaseManager {
         file_size INTEGER,
         version INTEGER DEFAULT 1,
         previous_record_id TEXT,
+        storage_ref TEXT,
+        ipfs_cid TEXT,
         created_at INTEGER NOT NULL,
         is_revoked INTEGER DEFAULT 0
       );
@@ -215,7 +256,51 @@ class DatabaseManager {
         created_at INTEGER NOT NULL
       );
       CREATE INDEX IF NOT EXISTS idx_patients_hospital ON registered_patients(hospital_id);
+
+      CREATE TABLE IF NOT EXISTS emergency_access_events (
+        id TEXT PRIMARY KEY,
+        access_id TEXT NOT NULL,
+        patient_id_hash TEXT NOT NULL,
+        doctor_name TEXT NOT NULL,
+        doctor_wallet TEXT NOT NULL,
+        hospital_id TEXT NOT NULL,
+        justification TEXT NOT NULL,
+        emergency_level TEXT NOT NULL,
+        accessed_at INTEGER NOT NULL,
+        expires_at INTEGER NOT NULL,
+        review_status TEXT DEFAULT 'PENDING_REVIEW',
+        admin_notes TEXT,
+        reviewed_at INTEGER,
+        reviewed_by TEXT,
+        emergency_contact_phone TEXT,
+        critical_summary_json TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_emergency_patient ON emergency_access_events(patient_id_hash);
+      CREATE INDEX IF NOT EXISTS idx_emergency_status ON emergency_access_events(review_status);
+
+      CREATE TABLE IF NOT EXISTS patient_alerts (
+        id TEXT PRIMARY KEY,
+        patient_id_hash TEXT NOT NULL,
+        alert_type TEXT NOT NULL,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        metadata_json TEXT,
+        is_read INTEGER DEFAULT 0,
+        created_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_alerts_patient ON patient_alerts(patient_id_hash);
     `);
+
+    // Schema migrations for Phase F-2 & F-3
+    try { this.db.exec("ALTER TABLE institutions ADD COLUMN license_number_hash TEXT"); } catch {}
+    try { this.db.exec("ALTER TABLE institutions ADD COLUMN document_hash TEXT"); } catch {}
+    try { this.db.exec("ALTER TABLE institutions ADD COLUMN rejection_reason TEXT"); } catch {}
+    try { this.db.exec("ALTER TABLE staff_members ADD COLUMN license_number TEXT"); } catch {}
+    try { this.db.exec("ALTER TABLE staff_members ADD COLUMN revocation_reason TEXT"); } catch {}
+    try { this.db.exec("ALTER TABLE registered_patients ADD COLUMN verified_by_staff TEXT"); } catch {}
+    try { this.db.exec("ALTER TABLE registered_patients ADD COLUMN binding_signature TEXT"); } catch {}
+    try { this.db.exec("ALTER TABLE records ADD COLUMN storage_ref TEXT"); } catch {}
+    try { this.db.exec("ALTER TABLE records ADD COLUMN ipfs_cid TEXT"); } catch {}
   }
 
   // Record methods
@@ -224,8 +309,9 @@ class DatabaseManager {
       INSERT OR REPLACE INTO records (
         record_id, patient_pseudonym, record_type, record_hash, cipher_hash,
         issuer_hospital, issuer_doctor, issuer_signature, storage_path,
-        file_name, mime_type, file_size, version, previous_record_id, created_at, is_revoked
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        file_name, mime_type, file_size, version, previous_record_id,
+        storage_ref, ipfs_cid, created_at, is_revoked
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
@@ -243,6 +329,8 @@ class DatabaseManager {
       record.file_size || 0,
       record.version || 1,
       record.previous_record_id || null,
+      record.storage_ref || null,
+      record.ipfs_cid || null,
       record.created_at || Date.now(),
       record.is_revoked || 0
     );
@@ -447,8 +535,9 @@ class DatabaseManager {
     const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO institutions (
         id, name, institution_type, chain_type, chain_id, rpc_port,
-        gateway_public_key, gateway_private_key, gateway_endpoint, status, trust_level, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        gateway_public_key, gateway_private_key, gateway_endpoint, status, trust_level, created_at,
+        license_number_hash, document_hash, rejection_reason
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
       inst.id,
@@ -462,7 +551,10 @@ class DatabaseManager {
       inst.gateway_endpoint,
       inst.status || "ACTIVE",
       inst.trust_level || 3,
-      inst.created_at || Date.now()
+      inst.created_at || Date.now(),
+      inst.license_number_hash || null,
+      inst.document_hash || null,
+      inst.rejection_reason || null
     );
   }
 
@@ -471,22 +563,37 @@ class DatabaseManager {
     return stmt.all() as unknown as InstitutionEntity[];
   }
 
+  public getPendingInstitutions(): InstitutionEntity[] {
+    const stmt = this.db.prepare("SELECT * FROM institutions WHERE status = 'APPLIED' ORDER BY created_at ASC");
+    return stmt.all() as unknown as InstitutionEntity[];
+  }
+
   public getInstitution(id: string): InstitutionEntity | undefined {
     const stmt = this.db.prepare("SELECT * FROM institutions WHERE id = ?");
     return stmt.get(id) as InstitutionEntity | undefined;
   }
 
-  public updateInstitutionStatus(id: string, status: "ACTIVE" | "SUSPENDED" | "REVOKED"): void {
-    const stmt = this.db.prepare("UPDATE institutions SET status = ? WHERE id = ?");
-    stmt.run(status, id);
+  public updateInstitutionStatus(id: string, status: "APPLIED" | "ACTIVE" | "SUSPENDED" | "REMOVED" | "REVOKED", reason?: string): void {
+    if (reason) {
+      const stmt = this.db.prepare("UPDATE institutions SET status = ?, rejection_reason = ? WHERE id = ?");
+      stmt.run(status, reason, id);
+    } else {
+      const stmt = this.db.prepare("UPDATE institutions SET status = ? WHERE id = ?");
+      stmt.run(status, id);
+    }
+  }
+
+  public updateGatewayPublicKey(id: string, newPublicKey: string): void {
+    const stmt = this.db.prepare("UPDATE institutions SET gateway_public_key = ? WHERE id = ?");
+    stmt.run(newPublicKey, id);
   }
 
   // Staff & Doctor Methods
   public insertStaff(staff: StaffEntity): void {
     const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO staff_members (
-        id, hospital_wallet, name, specialty, role, wallet_address, private_key, is_active, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, hospital_wallet, name, specialty, role, wallet_address, private_key, license_number, is_active, revocation_reason, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
       staff.id,
@@ -496,9 +603,16 @@ class DatabaseManager {
       staff.role,
       staff.wallet_address.toLowerCase(),
       staff.private_key || null,
+      staff.license_number || null,
       staff.is_active ?? 1,
+      staff.revocation_reason || null,
       staff.created_at || Date.now()
     );
+  }
+
+  public revokeStaff(wallet: string, reason: string): void {
+    const stmt = this.db.prepare("UPDATE staff_members SET is_active = 0, revocation_reason = ? WHERE wallet_address = ?");
+    stmt.run(reason, wallet.toLowerCase());
   }
 
   public getStaffByHospital(hospitalWallet: string): StaffEntity[] {
@@ -520,8 +634,9 @@ class DatabaseManager {
   public insertPatient(patient: PatientEntity): void {
     const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO registered_patients (
-        global_patient_id, local_pseudonym, name, id_secret, hospital_id, wallet_address, encrypted_keystore, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        global_patient_id, local_pseudonym, name, id_secret, hospital_id, wallet_address, encrypted_keystore,
+        verified_by_staff, binding_signature, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     stmt.run(
       patient.global_patient_id,
@@ -531,6 +646,8 @@ class DatabaseManager {
       patient.hospital_id,
       patient.wallet_address.toLowerCase(),
       patient.encrypted_keystore || null,
+      patient.verified_by_staff || null,
+      patient.binding_signature || null,
       patient.created_at || Date.now()
     );
   }
@@ -550,6 +667,87 @@ class DatabaseManager {
     return stmt.get(wallet.toLowerCase()) as PatientEntity | undefined;
   }
 
+  // Emergency Break-Glass & Review Queue Methods
+  public insertEmergencyAccess(event: EmergencyAccessEntity): void {
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO emergency_access_events (
+        id, access_id, patient_id_hash, doctor_name, doctor_wallet, hospital_id,
+        justification, emergency_level, accessed_at, expires_at, review_status,
+        admin_notes, reviewed_at, reviewed_by, emergency_contact_phone, critical_summary_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+      event.id,
+      event.access_id,
+      event.patient_id_hash.toLowerCase(),
+      event.doctor_name,
+      event.doctor_wallet.toLowerCase(),
+      event.hospital_id,
+      event.justification,
+      event.emergency_level,
+      event.accessed_at,
+      event.expires_at,
+      event.review_status || "PENDING_REVIEW",
+      event.admin_notes || null,
+      event.reviewed_at || null,
+      event.reviewed_by ? event.reviewed_by.toLowerCase() : null,
+      event.emergency_contact_phone || null,
+      event.critical_summary_json
+    );
+  }
+
+  public getAllEmergencyAccessEvents(): EmergencyAccessEntity[] {
+    const stmt = this.db.prepare("SELECT * FROM emergency_access_events ORDER BY accessed_at DESC");
+    return stmt.all() as unknown as EmergencyAccessEntity[];
+  }
+
+  public getEmergencyAccessById(id: string): EmergencyAccessEntity | undefined {
+    const stmt = this.db.prepare("SELECT * FROM emergency_access_events WHERE id = ? OR access_id = ?");
+    return stmt.get(id, id) as EmergencyAccessEntity | undefined;
+  }
+
+  public updateEmergencyReview(id: string, status: string, notes: string, reviewer: string): void {
+    const stmt = this.db.prepare(`
+      UPDATE emergency_access_events
+      SET review_status = ?, admin_notes = ?, reviewed_at = ?, reviewed_by = ?
+      WHERE id = ? OR access_id = ?
+    `);
+    stmt.run(status, notes, Date.now(), reviewer.toLowerCase(), id, id);
+  }
+
+  // Patient Alerts
+  public insertPatientAlert(alert: PatientAlertEntity): void {
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO patient_alerts (
+        id, patient_id_hash, alert_type, title, message, metadata_json, is_read, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+      alert.id,
+      alert.patient_id_hash.toLowerCase(),
+      alert.alert_type,
+      alert.title,
+      alert.message,
+      alert.metadata_json || null,
+      alert.is_read || 0,
+      alert.created_at || Date.now()
+    );
+  }
+
+  public getPatientAlerts(patientIdHash: string): PatientAlertEntity[] {
+    const stmt = this.db.prepare(`
+      SELECT * FROM patient_alerts
+      WHERE patient_id_hash = ?
+      ORDER BY created_at DESC
+    `);
+    return stmt.all(patientIdHash.toLowerCase()) as unknown as PatientAlertEntity[];
+  }
+
+  public markPatientAlertRead(alertId: string): void {
+    const stmt = this.db.prepare("UPDATE patient_alerts SET is_read = 1 WHERE id = ?");
+    stmt.run(alertId);
+  }
+
   public clearAllData(): void {
     this.db.exec(`
       DELETE FROM records;
@@ -559,6 +757,8 @@ class DatabaseManager {
       DELETE FROM institutions;
       DELETE FROM staff_members;
       DELETE FROM registered_patients;
+      DELETE FROM emergency_access_events;
+      DELETE FROM patient_alerts;
     `);
   }
 }

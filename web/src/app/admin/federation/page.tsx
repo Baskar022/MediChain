@@ -167,7 +167,7 @@ const INITIAL_TRANSIT_LOGS: InteropEnvelopeLog[] = [
     type: "LAB_RESULT_PUSH",
     from: "Metro Diagnostics Laboratory",
     to: "Regional Specialty Hospital",
-    fromChain: "Network C (Fabric-Style Simulated 9000)",
+    fromChain: "Network C (Algorand TestNet)",
     toChain: "Network B (EVM 31338)",
     patientIdHash: "0x88f5...b8d8",
     timestamp: "45 mins ago",
@@ -221,12 +221,19 @@ const INITIAL_EMERGENCY_REVIEWS: EmergencyReviewItem[] = [
 export default function FederationAdminPage() {
   const { account, role, notify } = useWeb3();
 
-  const [activeTab, setActiveTab] = useState<"members" | "monitor" | "emergency">("members");
+  const [activeTab, setActiveTab] = useState<"members" | "multisig" | "monitor" | "emergency">("members");
   const [members, setMembers] = useState<FederationMember[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
   const [transitLogs, setTransitLogs] = useState<InteropEnvelopeLog[]>(INITIAL_TRANSIT_LOGS);
   const [reviews, setReviews] = useState<EmergencyReviewItem[]>(INITIAL_EMERGENCY_REVIEWS);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Safe Multisig & Review Queue state
+  const [appliedMembers, setAppliedMembers] = useState<any[]>([]);
+  const [multisigData, setMultisigData] = useState<any>(null);
+  const [rotateKeyTarget, setRotateKeyTarget] = useState<FederationMember | null>(null);
+  const [newKeyInput, setNewKeyInput] = useState("");
+  const [submittingRotate, setSubmittingRotate] = useState(false);
 
   // Modal for onboarding new institution
   const [showOnboardModal, setShowOnboardModal] = useState(false);
@@ -274,9 +281,96 @@ export default function FederationAdminPage() {
     }
   };
 
+  const loadMultisigData = async () => {
+    try {
+      const [resMulti, resQueue] = await Promise.all([
+        fetch("/api/federation/multisig"),
+        fetch("/api/federation/review-queue"),
+      ]);
+      if (resMulti.ok) {
+        setMultisigData(await resMulti.json());
+      }
+      if (resQueue.ok) {
+        const qJson = await resQueue.json();
+        setAppliedMembers(qJson.appliedInstitutions || []);
+      }
+    } catch {}
+  };
+
   useEffect(() => {
     loadInstitutions();
+    loadMultisigData();
   }, []);
+
+  const handleRotateKeySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rotateKeyTarget || !newKeyInput.trim()) return;
+    setSubmittingRotate(true);
+    try {
+      const res = await fetch("/api/federation/rotate-key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          institutionId: rotateKeyTarget.id,
+          newGatewayPublicKey: newKeyInput.trim(),
+        }),
+      });
+      if (res.ok) {
+        notify("success", "Key Rotated", `Gateway public key updated for ${rotateKeyTarget.name}. Short-TTL cache cleared.`);
+        setRotateKeyTarget(null);
+        setNewKeyInput("");
+        loadInstitutions();
+      } else {
+        const err = await res.json();
+        notify("error", "Rotation Failed", err.error || "Failed to rotate key");
+      }
+    } catch (err: any) {
+      notify("error", "Rotation Failed", err.message);
+    } finally {
+      setSubmittingRotate(false);
+    }
+  };
+
+  const handleProposeMultisig = async (instId: string) => {
+    try {
+      const res = await fetch("/api/federation/multisig", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "PROPOSE",
+          targetInstitutionId: instId,
+          operation: "APPROVE_INSTITUTION",
+        }),
+      });
+      if (res.ok) {
+        notify("success", "Safe Proposal Created", "Multisig proposal created (1/2 signatures). Requires 1 more confirmation to execute.");
+        loadMultisigData();
+      }
+    } catch (e: any) {
+      notify("error", "Proposal failed", e.message);
+    }
+  };
+
+  const handleConfirmMultisig = async (propId: string) => {
+    try {
+      const res = await fetch("/api/federation/multisig", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "CONFIRM",
+          proposalId: propId,
+          signerAddress: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC", // Signer 2
+        }),
+      });
+      if (res.ok) {
+        notify("success", "Multisig Confirmed & Executed", "Threshold reached (2/2). Institution is now ACTIVE on Sepolia!");
+        loadMultisigData();
+        loadInstitutions();
+      }
+    } catch (e: any) {
+      notify("error", "Confirmation failed", e.message);
+    }
+  };
 
   const toggleMemberStatus = async (id: string) => {
     const current = members.find((m) => m.id === id);
@@ -415,7 +509,7 @@ export default function FederationAdminPage() {
           </div>
           <div className="mt-2 text-xs text-emerald-700 flex items-center space-x-1">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <span>2 EVM Chains, 1 Fabric-Style Simulated Ledger</span>
+            <span>2 EVM Chains (Sepolia & Amoy), 1 Non-EVM (Algorand TestNet)</span>
           </div>
         </div>
 
@@ -475,6 +569,23 @@ export default function FederationAdminPage() {
           }`}
         >
           <span>Member Institutions Directory ({members.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("multisig")}
+          className={`pb-3 relative flex items-center space-x-1.5 transition-colors ${
+            activeTab === "multisig"
+              ? "text-medichain-navy border-b-2 border-medichain-teal font-semibold"
+              : "text-medichain-muted hover:text-medichain-navy"
+          }`}
+        >
+          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+          <span>Safe Multisig & Onboarding Queue</span>
+          {appliedMembers.length > 0 && (
+            <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 rounded-full text-[10px] font-bold">
+              {appliedMembers.length}
+            </span>
+          )}
         </button>
 
         <button
@@ -608,7 +719,17 @@ export default function FederationAdminPage() {
                             </span>
                           )}
                         </td>
-                        <td className="py-3.5 px-4 text-right">
+                        <td className="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
+                          <button
+                            onClick={() => {
+                              setRotateKeyTarget(member);
+                              setNewKeyInput("");
+                            }}
+                            className="px-2.5 py-1 rounded text-xs font-medium bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors"
+                            title="Rotate Gateway ECDSA/ECIES Public Key"
+                          >
+                            Rotate Key
+                          </button>
                           <button
                             onClick={() => toggleMemberStatus(member.id)}
                             className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
@@ -626,6 +747,177 @@ export default function FederationAdminPage() {
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TAB: Safe Multisig Governance & Onboarding Review Queue */}
+      {activeTab === "multisig" && (
+        <div className="space-y-6">
+          {/* Safe Multisig Overview Card */}
+          <div className="bg-white border border-medichain-border rounded-xl p-5 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-medichain-border">
+              <div className="flex items-center space-x-3">
+                <span className="p-2 bg-emerald-100 text-emerald-800 rounded-lg">
+                  <ShieldCheck className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="font-serif text-base font-bold text-medichain-navy">
+                    Consortium Safe Multisig Trust Anchor (Sepolia)
+                  </h3>
+                  <div className="text-xs text-medichain-muted font-mono mt-0.5">
+                    Safe Address:{" "}
+                    <span className="font-semibold text-slate-800">
+                      {multisigData?.safeAddress || "0x9876543210987654321098765432109876543210"}
+                    </span>{" "}
+                    &bull; Threshold:{" "}
+                    <span className="bg-emerald-50 text-emerald-800 font-bold px-2 py-0.5 rounded border border-emerald-200">
+                      {multisigData?.threshold || "2-of-3 Required"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <a
+                href={multisigData?.safeWebUrl || "https://app.safe.global"}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-semibold hover:bg-slate-800 transition shadow-xs"
+              >
+                <span>Open in Safe&#123;Wallet&#125;</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </div>
+
+            {/* Owners Grid */}
+            <div>
+              <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                Designated Consortium Signers (2-of-3 Threshold)
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                {(multisigData?.owners || [
+                  "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+                  "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+                  "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+                ]).map((owner: string, idx: number) => (
+                  <div key={owner} className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 font-mono">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                      Owner #{idx + 1} ({idx === 0 ? "Hospital 1" : idx === 1 ? "Hospital 2" : "Lab / Reviewer"})
+                    </span>
+                    <span className="text-slate-700 truncate block mt-0.5">{owner}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Pending Applications Review Queue */}
+          <div className="bg-white border border-medichain-border rounded-xl p-5 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-medichain-border">
+              <div>
+                <h3 className="font-serif text-base font-bold text-medichain-navy">
+                  Onboarding Review Queue &bull; Applicant Institutions
+                </h3>
+                <p className="text-xs text-medichain-muted mt-0.5">
+                  Institutions in APPLIED state requiring 2-of-3 multi-signature governance approval.
+                </p>
+              </div>
+              <span className="px-2.5 py-1 bg-amber-100 text-amber-800 rounded-full text-xs font-bold font-mono">
+                {appliedMembers.length} Pending Approval
+              </span>
+            </div>
+
+            {appliedMembers.length === 0 ? (
+              <div className="py-8 text-center text-slate-500 text-xs">
+                <CheckCircle2 className="w-7 h-7 text-emerald-400 mx-auto mb-1.5" />
+                <span>All applicant institutions have been reviewed. No pending applications in queue.</span>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {appliedMembers.map((inst) => (
+                  <div
+                    key={inst.id}
+                    className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  >
+                    <div className="space-y-1 text-xs">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-bold text-sm text-slate-900">{inst.name}</span>
+                        <span className="px-2 py-0.5 rounded font-mono text-[10px] font-bold bg-amber-100 text-amber-800">
+                          {inst.status}
+                        </span>
+                        <span className="px-2 py-0.5 rounded font-mono text-[10px] bg-blue-50 text-blue-700 border border-blue-200">
+                          {inst.chain_type}
+                        </span>
+                      </div>
+                      <div className="text-slate-500">
+                        License Hash: <span className="font-mono text-slate-700">{inst.license_number_hash ? `${inst.license_number_hash.slice(0, 16)}...` : "VERIFIED_STATE_REGISTRY"}</span>
+                      </div>
+                      <div className="text-slate-500">
+                        IPFS Accreditation Doc: <span className="font-mono text-slate-700">{inst.document_hash || "ipfs://bafkrei_accreditation_papers"}</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => handleProposeMultisig(inst.id)}
+                      className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs transition shrink-0"
+                    >
+                      Propose 2-of-3 Safe Approval
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Active Multisig Proposals Tracker */}
+          {multisigData?.proposals && multisigData.proposals.length > 0 && (
+            <div className="bg-white border border-medichain-border rounded-xl p-5 shadow-xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-medichain-border">
+                <h3 className="font-serif text-base font-bold text-medichain-navy">
+                  Active Multi-Sig Transaction Proposals
+                </h3>
+                <span className="text-xs text-medichain-muted font-mono">
+                  {multisigData.proposals.filter((p: any) => p.status === "PENDING_CONFIRMATIONS").length} Active
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {multisigData.proposals.map((prop: any) => (
+                  <div
+                    key={prop.id}
+                    className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-bold text-slate-900">{prop.operation.replace(/_/g, " ")}:</span>
+                        <span className="font-semibold text-medichain-teal">{prop.targetInstitutionName}</span>
+                        <span
+                          className={`px-2 py-0.5 rounded font-mono text-[10px] font-bold ${
+                            prop.status === "EXECUTED"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : "bg-amber-100 text-amber-800"
+                          }`}
+                        >
+                          {prop.status}
+                        </span>
+                      </div>
+                      <div className="text-slate-500 font-mono">
+                        Progress: {prop.confirmations.length}/2 Confirmations &bull; Proposed by: {prop.proposedBy.slice(0, 14)}...
+                      </div>
+                    </div>
+
+                    {prop.status === "PENDING_CONFIRMATIONS" && (
+                      <button
+                        onClick={() => handleConfirmMultisig(prop.id)}
+                        className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-semibold shadow-xs transition shrink-0"
+                      >
+                        Sign Confirmation (Signer 2) & Execute
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -960,6 +1252,82 @@ export default function FederationAdminPage() {
                   className="px-4 py-2 bg-medichain-teal hover:bg-[#186363] text-white rounded font-medium shadow-sm transition-colors"
                 >
                   Register on Federation Chain
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: Rotate Gateway Public Key */}
+      {rotateKeyTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-bold text-base text-[#0F1F2E]">
+                Rotate Gateway Public Key
+              </h3>
+              <button
+                onClick={() => setRotateKeyTarget(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="text-xs text-slate-600 space-y-1">
+              <p>
+                Institution: <span className="font-bold">{rotateKeyTarget.name}</span> ({rotateKeyTarget.id})
+              </p>
+              <p className="font-mono text-slate-500 truncate">
+                Current Key: {rotateKeyTarget.gatewayPublicKey}
+              </p>
+            </div>
+
+            <form onSubmit={handleRotateKeySubmit} className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-slate-700">New SECP256k1 Public Key</label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Generate random uncompressed 65-byte hex key for convenience
+                      const randHex = "0x04" + Array.from(crypto.getRandomValues(new Uint8Array(64))).map(b => b.toString(16).padStart(2, "0")).join("");
+                      setNewKeyInput(randHex);
+                    }}
+                    className="text-[11px] text-[#1F7A7A] hover:underline font-semibold"
+                  >
+                    Generate Random Key
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={newKeyInput}
+                  onChange={(e) => setNewKeyInput(e.target.value)}
+                  placeholder="0x04..."
+                  required
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono focus:ring-1 focus:ring-[#1F7A7A] focus:outline-hidden"
+                />
+              </div>
+
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-800">
+                Rotated gateway keys immediately invalidate the short-TTL in-memory authorization cache on all interconnected gateways.
+              </div>
+
+              <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setRotateKeyTarget(null)}
+                  className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submittingRotate || !newKeyInput.trim()}
+                  className="px-4 py-2 bg-[#1F7A7A] hover:bg-[#176161] text-white rounded-lg text-xs font-semibold shadow-xs transition"
+                >
+                  {submittingRotate ? "Rotating..." : "Rotate Gateway Key"}
                 </button>
               </div>
             </form>
