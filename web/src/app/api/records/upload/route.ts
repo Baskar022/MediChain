@@ -3,6 +3,7 @@ import fs from "fs";
 import path from "path";
 import { dbManager } from "@/lib/db";
 import { computeSha256 } from "@/lib/crypto/hash";
+import { IpfsService } from "@/lib/ipfs/service";
 import { authenticateRequest, rateLimit, applySecurityHeaders } from "@/lib/api/middleware";
 
 export async function POST(req: NextRequest) {
@@ -144,14 +145,51 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Persist encrypted payload off-chain in /storage
+    // 1.5 Versioning integrity check
+    if (previousRecordId) {
+      const prevRecord = dbManager.getRecord(previousRecordId);
+      if (!prevRecord) {
+        return applySecurityHeaders(
+          NextResponse.json(
+            { error: `Invalid version lineage: Referenced previous record '${previousRecordId}' does not exist.` },
+            { status: 400 }
+          )
+        );
+      }
+      if (prevRecord.is_revoked === 1) {
+        return applySecurityHeaders(
+          NextResponse.json(
+            { error: `Cannot update revoked record: Previous version '${previousRecordId}' has been revoked.` },
+            { status: 400 }
+          )
+        );
+      }
+    }
+
+    // 2. Persist encrypted payload off-chain (IPFS Pinata with local fallback)
     const safeRecordFileName = `${recordId.replace(/[^a-zA-Z0-9_-]/g, "")}.enc`;
-    const storagePath = path.join(dbManager.storageDir, safeRecordFileName);
     const storagePayload = JSON.stringify({ ciphertext, iv });
+    const payloadBuffer = Buffer.from(storagePayload, "utf-8");
 
-    fs.writeFileSync(storagePath, storagePayload, "utf-8");
+    let effectiveStorageRef = body.storageRef;
+    let ipfsCid: string | null = null;
+    let pinProvider = "LOCAL_STORAGE";
 
-    // 3. Persist record metadata in SQLite
+    if (!effectiveStorageRef) {
+      const pinResult = await IpfsService.pinFile(payloadBuffer, safeRecordFileName, {
+        recordId,
+        patientPseudonym,
+        recordType: recordType || "General",
+        issuerHospital: effectiveHospital,
+      });
+      effectiveStorageRef = pinResult.ipfsUri;
+      ipfsCid = pinResult.cid;
+      pinProvider = pinResult.provider;
+    } else if (effectiveStorageRef.startsWith("ipfs://")) {
+      ipfsCid = effectiveStorageRef.replace("ipfs://", "");
+    }
+
+    // 3. Persist record metadata in database
     dbManager.insertRecord({
       record_id: recordId,
       patient_pseudonym: patientPseudonym,
@@ -162,6 +200,8 @@ export async function POST(req: NextRequest) {
       issuer_doctor: issuerDoctor || authenticatedUser?.walletAddress || "",
       issuer_signature: issuerSignature || "",
       storage_path: `storage/${safeRecordFileName}`,
+      storage_ref: effectiveStorageRef,
+      ipfs_cid: ipfsCid,
       file_name: fileName || "record.dat",
       mime_type: mimeType || "application/json",
       file_size: fileSize || Buffer.byteLength(ciphertext, "utf-8"),
@@ -184,9 +224,12 @@ export async function POST(req: NextRequest) {
       NextResponse.json({
         success: true,
         recordId,
-        storageRef: `storage/${safeRecordFileName}`,
+        storageRef: effectiveStorageRef,
+        ipfsCid,
+        storagePath: `storage/${safeRecordFileName}`,
         cipherHash,
         version: version || 1,
+        pinProvider,
       })
     );
   } catch (err: any) {

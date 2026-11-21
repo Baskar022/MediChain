@@ -76,3 +76,47 @@ export function verifyPatientControlSignature(
     return false;
   }
 }
+
+export interface PatientRegistrationBinding {
+  globalPatientId: string;
+  institutionId: string;
+  patientWallet: string;
+  staffWallet: string;
+  linkMessage: string;
+  patientSignature: string;
+  institutionCountersignature: string;
+  verifiedAt: number;
+}
+
+/**
+ * Constructs the canonical binding message for in-person patient registration.
+ */
+export function createPatientRegistrationLinkMessage(
+  globalPatientId: string,
+  institutionId: string,
+  timestamp: number = Math.floor(Date.now() / 1000)
+): string {
+  return `I am global patient ${globalPatientId} registered at institution ${institutionId}\nTimestamp: ${timestamp}`;
+}
+
+/**
+ * Verifies both the patient's signature and the institution staff countersignature.
+ */
+export function verifyPatientRegistrationBinding(
+  binding: PatientRegistrationBinding
+): boolean {
+  try {
+    // 1. Verify patient signature
+    const recoveredPatient = ethers.verifyMessage(binding.linkMessage, binding.patientSignature);
+    if (recoveredPatient.toLowerCase() !== binding.patientWallet.toLowerCase()) {
+      return false;
+    }
+
+    // 2. Verify staff countersignature
+    const staffMessage = `${binding.linkMessage}\nVerified in-person by staff: ${binding.staffWallet.toLowerCase()}`;
+    const recoveredStaff = ethers.verifyMessage(staffMessage, binding.institutionCountersignature);
+    return recoveredStaff.toLowerCase() === binding.staffWallet.toLowerCase();
+  } catch {
+    return false;
+  }
+}

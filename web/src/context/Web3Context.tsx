@@ -25,42 +25,71 @@ export interface SovereignNetwork {
   id: string;
   name: string;
   institution: string;
-  type: "EVM" | "PERMISSIONED_LEDGER";
+  type: "EVM" | "ALGORAND" | "PERMISSIONED_LEDGER";
   chainId?: number;
-  port: number;
+  port?: number;
   rpcUrl: string;
   badgeLabel: string;
 }
 
+export const DEMO_KEYS: Record<string, string> = {
+  "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266": "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", // Admin
+  "0x70997970c51812dc3a010c7d01b50e0d17dc79c8": "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d", // Hospital A
+  "0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc": "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a", // Dr. Sarah Chen
+  "0x90f79bf6eb2c4f870365e785982e1f101e93b906": "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6", // Alice Vance
+  "0x15d34aaf54267db7d7c367839aaf71a00a2c6a65": "0x47e179ec340f61711fce9740283048c6718497f43b9671100e47ab2461478974", // St. Jude Hospital
+  "0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc": "0x8b3a350cf5c34c9194ca85829a2df0ec3153be0318b5e2d3348e872092edffba", // Auditor
+};
+
 export const SOVEREIGN_NETWORKS: SovereignNetwork[] = [
   {
+    id: "sepolia",
+    name: "Ethereum Sepolia (Hospital 1)",
+    institution: "City General Hospital & Federation Hub",
+    type: "EVM",
+    chainId: 11155111,
+    port: 8545,
+    rpcUrl: "https://ethereum-sepolia-rpc.publicnode.com",
+    badgeLabel: "Sepolia TestNet (11155111)",
+  },
+  {
+    id: "amoy",
+    name: "Polygon Amoy (Hospital 2)",
+    institution: "Regional Specialty Hospital",
+    type: "EVM",
+    chainId: 80002,
+    port: 8546,
+    rpcUrl: "https://rpc-amoy.polygon.technology",
+    badgeLabel: "Amoy TestNet (80002)",
+  },
+  {
+    id: "algorand-testnet",
+    name: "Algorand TestNet (Diagnostic Lab)",
+    institution: "Metro Diagnostics Laboratory",
+    type: "ALGORAND",
+    port: 4001,
+    rpcUrl: "https://testnet-api.algonode.cloud",
+    badgeLabel: "Algorand TestNet (416002)",
+  },
+  {
     id: "network-a",
-    name: "City General Hospital",
+    name: "City General Hospital (Local)",
     institution: "City General Hospital",
     type: "EVM",
     chainId: 31337,
     port: 8545,
     rpcUrl: "http://127.0.0.1:8545",
-    badgeLabel: "EVM (31337)",
+    badgeLabel: "Local Node A (31337)",
   },
   {
     id: "network-b",
-    name: "Regional Specialty Hospital",
+    name: "Regional Specialty (Local)",
     institution: "Regional Specialty Hospital",
     type: "EVM",
     chainId: 31338,
     port: 8546,
     rpcUrl: "http://127.0.0.1:8546",
-    badgeLabel: "EVM (31338)",
-  },
-  {
-    id: "network-c",
-    name: "Metro Diagnostics Laboratory",
-    institution: "Metro Diagnostics Laboratory",
-    type: "PERMISSIONED_LEDGER",
-    port: 9000,
-    rpcUrl: "http://127.0.0.1:9000",
-    badgeLabel: "Fabric-Style (Simulated 9000)",
+    badgeLabel: "Local Node B (31338)",
   },
 ];
 
@@ -159,9 +188,14 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
         setChainId(parseInt(hexChainId, 16));
       });
     } else {
-      // Fallback local RPC provider for read-only access
-      const rpcProvider = new ethers.JsonRpcProvider(NETWORK_CONFIG.rpcUrl);
-      setProvider(rpcProvider);
+      // Fallback RPC provider for read-only access (with static network to prevent background retry spam)
+      try {
+        const net = new ethers.Network(NETWORK_CONFIG.chainName, NETWORK_CONFIG.chainId);
+        const rpcProvider = new ethers.JsonRpcProvider(NETWORK_CONFIG.rpcUrl, net, { staticNetwork: true });
+        setProvider(rpcProvider);
+      } catch {
+        // Silent fallback without retry error
+      }
     }
 
     const savedToken = localStorage.getItem("medichain_jwt");
@@ -285,8 +319,12 @@ export function Web3Provider({ children }: { children: React.ReactNode }) {
       let signature = "";
       if (signer) {
         signature = await signer.signMessage(challenge.message);
+      } else if (account && DEMO_KEYS[account.toLowerCase()]) {
+        // Authenticate with deterministic demo account private key
+        const demoWallet = new ethers.Wallet(DEMO_KEYS[account.toLowerCase()]);
+        signature = await demoWallet.signMessage(challenge.message);
       } else {
-        // Mock sign for simulated demo mode
+        // Fallback random mock signature
         const mockWallet = ethers.Wallet.createRandom();
         signature = await mockWallet.signMessage(challenge.message);
       }

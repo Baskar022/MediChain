@@ -18,7 +18,7 @@ export interface CrossChainVerificationReport {
   sourceChain: {
     institutionName: string;
     chainIdentifier: string;
-    chainType: "EVM" | "PERMISSIONED_LEDGER";
+    chainType: "EVM" | "ALGORAND" | "FABRIC" | "PERMISSIONED_LEDGER";
     blockNumber: number;
     blockHash: string;
     merkleRoot: string;

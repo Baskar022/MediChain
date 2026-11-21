@@ -48,9 +48,13 @@ export async function POST(request: NextRequest) {
       privateKey = generated.privateKey;
     }
 
-    // Attempt to fund/sponsor the new doctor wallet on Network A (port 8545) with 1 ETH
+    // Attempt to fund/sponsor the new doctor wallet on Network A with 1 ETH
     try {
-      const provider = new ethers.JsonRpcProvider(process.env.NEXT_PUBLIC_NETWORK_A_RPC || "http://127.0.0.1:8545");
+      const provider = new ethers.JsonRpcProvider(
+        process.env.NEXT_PUBLIC_NETWORK_A_RPC || "http://127.0.0.1:8545",
+        undefined,
+        { staticNetwork: true }
+      );
       const faucet = new ethers.Wallet(DEFAULT_DEV_KEY, provider);
       const tx = await faucet.sendTransaction({
         to: walletAddress,

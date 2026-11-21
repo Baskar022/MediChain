@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     const rpcUrl = RPCS[network] || RPCS.networkA;
-    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    const provider = new ethers.JsonRpcProvider(rpcUrl, undefined, { staticNetwork: true });
     const faucetWallet = new ethers.Wallet(DEFAULT_DEV_KEY, provider);
 
     const tx = await faucetWallet.sendTransaction({

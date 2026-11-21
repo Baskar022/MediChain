@@ -118,6 +118,45 @@ export default function PatientRegisterPage() {
         {/* Registration Form */}
         <div className="md:col-span-2 bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
           <form onSubmit={handleRegister} className="space-y-4">
+            {/* Quick Fill Synthetic Patients */}
+            <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg space-y-2">
+              <span className="text-[11px] font-mono text-slate-500 uppercase tracking-wider block">
+                Quick-Fill Evaluation Synthetic Patient:
+              </span>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setName("Alice M. Carter (Synthetic)");
+                    setIdSecret("SYNTHETIC-NATIONAL-ID-001-ALICE");
+                  }}
+                  className="px-2.5 py-1 text-xs bg-white hover:bg-slate-100 border border-slate-200 rounded text-slate-700 font-medium transition"
+                >
+                  Alice M. Carter
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setName("Robert J. Miller (Synthetic)");
+                    setIdSecret("SYNTHETIC-NATIONAL-ID-002-BOB");
+                  }}
+                  className="px-2.5 py-1 text-xs bg-white hover:bg-slate-100 border border-slate-200 rounded text-slate-700 font-medium transition"
+                >
+                  Robert J. Miller
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setName("Charlie D. Evans (Synthetic)");
+                    setIdSecret("SYNTHETIC-NATIONAL-ID-003-CHARLIE");
+                  }}
+                  className="px-2.5 py-1 text-xs bg-white hover:bg-slate-100 border border-slate-200 rounded text-slate-700 font-medium transition"
+                >
+                  Charlie D. Evans
+                </button>
+              </div>
+            </div>
+
             <div>
               <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
                 Patient Legal Name or Clinical Alias

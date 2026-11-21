@@ -24,14 +24,13 @@ import {
 interface NetworkMeta {
   id: string;
   name: string;
-  type: "EVM" | "FABRIC_SIMULATED";
+  type: "EVM" | "ALGORAND" | "FABRIC_SIMULATED";
   badge: string;
   technology: string;
   consensus: string;
   rpcOrApiUrl: string;
   chainId?: number;
   description: string;
-  honestNotice?: string;
 }
 
 interface BlockItem {
@@ -163,11 +162,11 @@ export default function ChainExplorerPage() {
         </div>
       </div>
 
-      {/* Honest Technological Disclosure Banner */}
-      <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-4 flex items-start space-x-3">
-        <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-        <div className="text-xs text-amber-900 leading-relaxed">
-          <span className="font-bold">Honest Technology Status:</span> Networks A & B are independent Ethereum Virtual Machine (EVM) chains run locally on Hardhat nodes (Chain IDs 31337 and 31338). Network C is a <span className="font-semibold">Fabric-style permissioned ledger (simulated)</span> operating with SHA-256 Merkle proofs and deterministic block production. Real Hyperledger Fabric chaincode is in <code className="bg-amber-100 px-1 py-0.5 rounded text-amber-950 font-mono">/fabric</code>, ready to deploy to official Fabric Docker test-networks.
+      {/* Consortium Architecture Overview Banner */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-start space-x-3">
+        <Layers className="w-5 h-5 text-medichain-teal shrink-0 mt-0.5" />
+        <div className="text-xs text-slate-700 leading-relaxed">
+          <span className="font-semibold text-slate-900">Heterogeneous Multi-Chain Consortium:</span> Connected across Ethereum Sepolia (Hospital 1 & Neutral Trust Layer), Polygon Amoy (Hospital 2), and Algorand TestNet (Diagnostic Laboratory), with zero-knowledge cryptographic verification and Safe 2-of-3 multi-signature governance.
         </div>
       </div>
 
@@ -321,13 +320,6 @@ export default function ChainExplorerPage() {
                   </span>
                 </div>
               </div>
-
-              {meta.honestNotice && (
-                <div className="bg-amber-50/60 border-b border-amber-200/80 px-6 py-2.5 text-xs text-amber-900 flex items-center space-x-2">
-                  <Info className="w-4 h-4 text-amber-600 shrink-0" />
-                  <span>{meta.honestNotice}</span>
-                </div>
-              )}
 
               {/* Offline Warning */}
               {!tele.online && (

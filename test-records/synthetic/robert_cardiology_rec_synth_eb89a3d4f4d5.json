@@ -1,0 +1,33 @@
+{
+  "resourceType": "DiagnosticReport",
+  "id": "rec_synth_eb89a3d4f4d5",
+  "status": "final",
+  "category": "CARDIOLOGY",
+  "code": {
+    "system": "http://loinc.org",
+    "code": "11524-6",
+    "display": "12-Lead Electrocardiogram & Echocardiography Study"
+  },
+  "subject": {
+    "globalPatientId": "0x840dfc91598ea36088ab1527a602134f63cf5b0fea4c34a957a1c2dde5bb3bb3",
+    "pseudonym": "0x031113a618dbea3ae12d5b9dcae07f97895e31d172248b882582b00b1ff23f5a",
+    "displayName": "Robert J. Miller (Synthetic)"
+  },
+  "effectiveDateTime": "2026-11-21T00:44:40.047Z",
+  "issued": "2026-11-21T00:44:40.047Z",
+  "performer": {
+    "institutionId": "hospital-sepolia-01",
+    "institutionName": "City General Hospital",
+    "chainIdentifier": "11155111",
+    "practitionerName": "Dr. Evelyn Reed, MD",
+    "practitionerWallet": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+  },
+  "conclusion": "Normal sinus rhythm at 72 bpm. Left ventricular ejection fraction 62%. No acute ischemic ST changes.",
+  "criticalAlert": false,
+  "notes": [
+    "Blood Pressure: 122/78 mmHg",
+    "PR Interval: 156 ms",
+    "QRS Duration: 88 ms",
+    "QTc Interval: 412 ms"
+  ]
+}

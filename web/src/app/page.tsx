@@ -131,8 +131,8 @@ export default function EditorialLandingPage() {
             <div className="space-y-3 text-xs">
               <div className="flex items-center justify-between p-2.5 bg-[#F6F4EF]/50 border border-[#E4DFD5] rounded-sm">
                 <div>
-                  <div className="font-semibold text-[#0F1F2E]">Network A: City General Hospital</div>
-                  <div className="text-[10px] font-mono text-[#6B7A88]">EVM Hardhat / Anvil • Port 8545 • Chain ID 31337</div>
+                  <div className="font-semibold text-[#0F1F2E]">Network A: City General Hospital & Federation Hub</div>
+                  <div className="text-[10px] font-mono text-[#6B7A88]">Ethereum Sepolia • Chain ID 11155111 • Safe 2-of-3 Multisig</div>
                 </div>
                 <span className="w-2 h-2 rounded-full bg-[#2E7D5B]" />
               </div>
@@ -140,23 +140,23 @@ export default function EditorialLandingPage() {
               <div className="flex items-center justify-between p-2.5 bg-[#F6F4EF]/50 border border-[#E4DFD5] rounded-sm">
                 <div>
                   <div className="font-semibold text-[#0F1F2E]">Network B: Regional Specialty Hospital</div>
-                  <div className="text-[10px] font-mono text-[#6B7A88]">EVM Hardhat / Anvil • Port 8546 • Chain ID 31338</div>
+                  <div className="text-[10px] font-mono text-[#6B7A88]">Polygon Amoy • Chain ID 80002 • PoS TestNet</div>
                 </div>
                 <span className="w-2 h-2 rounded-full bg-[#2E7D5B]" />
               </div>
 
               <div className="flex items-center justify-between p-2.5 bg-[#F6F4EF]/50 border border-[#E4DFD5] rounded-sm">
                 <div>
-                  <div className="font-semibold text-[#0F1F2E]">Network C: Metro Diagnostics Lab</div>
-                  <div className="text-[10px] font-mono text-[#6B7A88]">Fabric-Style Simulated Ledger • Port 9000</div>
+                  <div className="font-semibold text-[#0F1F2E]">Network C: Metro Diagnostics Laboratory</div>
+                  <div className="text-[10px] font-mono text-[#6B7A88]">Algorand TestNet • Pure PoS • Non-EVM Diagnostic Lab</div>
                 </div>
                 <span className="w-2 h-2 rounded-full bg-[#2E7D5B]" />
               </div>
 
               <div className="flex items-center justify-between p-2.5 bg-[#F6F4EF]/50 border border-[#E4DFD5] rounded-sm">
                 <div>
-                  <div className="font-semibold text-[#0F1F2E]">Federation Interoperability Registry</div>
-                  <div className="text-[10px] font-mono text-[#6B7A88]">Hub Chain • Port 8547 • Chain ID 31340</div>
+                  <div className="font-semibold text-[#0F1F2E]">Encrypted Storage & Federation Gateways</div>
+                  <div className="text-[10px] font-mono text-[#6B7A88]">Pinata IPFS • AES-256-GCM • ECIES secp256k1 Wrapping</div>
                 </div>
                 <span className="w-2 h-2 rounded-full bg-[#2E7D5B]" />
               </div>
@@ -287,13 +287,13 @@ export default function EditorialLandingPage() {
                 Anchor Tx
               </text>
 
-              {/* Zone 3: Network C (Fabric-Style Simulated Ledger) */}
+              {/* Zone 3: Network C (Algorand TestNet Diagnostic Lab) */}
               <rect x="670" y="10" width="280" height="320" rx="4" fill="#FBF9F5" stroke="#E4DFD5" strokeWidth="1" />
               <text x="685" y="38" className="text-xs font-mono font-bold" fill="#0F1F2E">
                 NETWORK C: METRO LAB
               </text>
               <text x="685" y="55" className="text-[10px] font-mono" fill="#1F7A7A">
-                Fabric-Style Simulated Ledger (Port 9000)
+                Algorand TestNet (AVM / Pure PoS)
               </text>
 
               {/* Target Step 1: Ledger Anchoring */}

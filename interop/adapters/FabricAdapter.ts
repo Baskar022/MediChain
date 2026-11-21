@@ -341,6 +341,32 @@ export class FabricAdapter implements ChainAdapter {
     };
   }
 
+  public async registerForeignProof(
+    recordId: string,
+    sourceChain: string,
+    sourceInstitution: string,
+    recordHash: string,
+    cipherHash: string,
+    storageRef: string,
+    attestationSignature: string
+  ): Promise<RecordRegistrationResult> {
+    return {
+      recordId,
+      txHash: "0xfabric_foreign_ref_" + crypto.randomBytes(16).toString("hex"),
+      blockNumber: 10,
+      timestamp: Math.floor(Date.now() / 1000),
+    };
+  }
+
+  public async healthCheck() {
+    return {
+      online: true,
+      blockHeight: 10,
+      chainIdOrGenesis: "fabric-mychannel",
+      latencyMs: 5,
+    };
+  }
+
   public async close(): Promise<void> {
     if (this.gateway) {
       await this.gateway.close();

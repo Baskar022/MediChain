@@ -9,18 +9,22 @@ export async function GET(request: NextRequest) {
   const hash = searchParams.get("hash")?.trim();
 
   if (!hash) {
-    return NextResponse.json({ error: "Hash or Record ID query parameter required" }, { status: 400 });
+    return NextResponse.json({ error: "Hash, CID, or Record ID query parameter required" }, { status: 400 });
   }
 
   const cleanHash = hash.toLowerCase();
 
-  // 1. Search SQLite Database
+  // 1. Search SQLite Database & Prisma Cache
   const allRecords = dbManager.getAllRecords();
+  const institutions = dbManager.getAllInstitutions();
+
   const matched = allRecords.find(
     (r) =>
       r.record_id.toLowerCase() === cleanHash ||
       r.record_hash.toLowerCase() === cleanHash ||
       r.cipher_hash.toLowerCase() === cleanHash ||
+      (r.ipfs_cid && r.ipfs_cid.toLowerCase() === cleanHash) ||
+      (r.storage_ref && r.storage_ref.toLowerCase() === cleanHash) ||
       path.basename(r.storage_path).toLowerCase() === cleanHash ||
       path.basename(r.storage_path, ".enc").toLowerCase() === cleanHash
   );
@@ -46,6 +50,9 @@ export async function GET(request: NextRequest) {
         // Raw file checksum
         const rawBuffer = fs.readFileSync(fullPath);
         liveCipherHash = "0x" + require("crypto").createHash("sha256").update(rawBuffer).digest("hex");
+        if (liveCipherHash.toLowerCase() !== matched.cipher_hash.toLowerCase()) {
+          isTampered = true;
+        }
       }
     }
 
@@ -56,6 +63,16 @@ export async function GET(request: NextRequest) {
     let status = "VERIFIED_AUTHENTIC";
     if (matched.is_revoked === 1) status = "REVOKED";
     if (isTampered) status = "TAMPER_DETECTED";
+
+    // Dynamic resolution of institution and blockchain network
+    const inst = institutions.find(
+      (i) =>
+        i.id.toLowerCase() === matched.issuer_hospital.toLowerCase() ||
+        i.gateway_public_key.toLowerCase() === matched.issuer_hospital.toLowerCase()
+    );
+
+    const sourceNetwork = inst ? `${inst.name} (${inst.chain_type})` : `Institution (${matched.issuer_hospital.slice(0, 10)}...)`;
+    const chainType = inst ? inst.chain_type : "EVM";
 
     return NextResponse.json({
       isAnchored: true,
@@ -69,14 +86,17 @@ export async function GET(request: NextRequest) {
         isRevoked: matched.is_revoked === 1,
         recordType: matched.record_type,
         studyName: matched.file_name || "Clinical Document",
-        sourceNetwork: matched.issuer_hospital.includes("7099") ? "City General Hospital (Network A)" : "Regional Specialty Hospital (Network B)",
-        chainType: "EVM",
-        issuerName: matched.issuer_doctor.slice(0, 10) + "...",
+        sourceNetwork,
+        chainType,
+        issuerName: inst ? inst.name : (matched.issuer_doctor.slice(0, 10) + "..."),
         issuerAddress: matched.issuer_doctor,
         issuerSignature: matched.issuer_signature || "0xecdsa_signature_anchored",
         storagePath: matched.storage_path,
+        storageRef: matched.storage_ref || `ipfs://${matched.ipfs_cid || "bafkrei..."}`,
+        ipfsCid: matched.ipfs_cid || null,
         timestamp: new Date(matched.created_at).toISOString(),
         version: matched.version,
+        previousRecordId: matched.previous_record_id || null,
       },
       proofEvidence: {
         federationVerified: true,
@@ -90,55 +110,42 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // 2. Query Network C (Fabric-Style Simulated Ledger) via HTTP REST
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 1200);
-    const ledgerRes = await fetch(`http://127.0.0.1:9000/api/records/${cleanHash}`, {
-      signal: controller.signal,
-    }).catch(() => null);
-    clearTimeout(timer);
+  // 2. Check unanchored files in local /storage directory
+  if (fs.existsSync(dbManager.storageDir)) {
+    try {
+      const storageFiles = fs.readdirSync(dbManager.storageDir);
+      for (const fileName of storageFiles) {
+        const filePath = path.join(dbManager.storageDir, fileName);
+        const fileContent = fs.readFileSync(filePath, "utf-8");
+        let candidateCipherHash = "";
+        try {
+          const parsed = JSON.parse(fileContent);
+          if (parsed && parsed.ciphertext) {
+            candidateCipherHash = computeSha256(parsed.ciphertext).toLowerCase();
+          }
+        } catch {}
 
-    if (ledgerRes && ledgerRes.ok) {
-      const rec = await ledgerRes.json();
-      return NextResponse.json({
-        isAnchored: true,
-        status: "VERIFIED_AUTHENTIC",
-        record: {
-          recordId: rec.recordId,
-          recordHash: rec.recordHash,
-          cipherHash: rec.cipherHash,
-          isTampered: false,
-          isRevoked: false,
-          recordType: rec.recordType || "Laboratory Result",
-          studyName: "Diagnostic Blood & Pathology Profile",
-          sourceNetwork: "Metro Diagnostics Lab (Network C)",
-          chainType: "NON-EVM PERMISSIONED LEDGER",
-          issuerName: "Metro Diagnostics Laboratory Authority",
-          issuerAddress: rec.issuerDoctorSignature?.slice(0, 16) || "Metro Lab Authority",
-          issuerSignature: rec.issuerDoctorSignature || "0xledger_validator_signature",
-          storagePath: rec.storageRef || "Network C State Store",
-          timestamp: new Date(rec.timestamp * 1000).toISOString(),
-          version: 1,
-        },
-        proofEvidence: {
-          federationVerified: true,
-          gatewayAttestationVerified: true,
-          issuerSignatureVerified: true,
-          hashMatchVerified: true,
-          inclusionProofVerified: true,
-          consentValid: true,
-          revocationStatus: "ACTIVE",
-        },
-      });
-    }
-  } catch {}
+        if (
+          candidateCipherHash === cleanHash ||
+          fileName.toLowerCase() === cleanHash ||
+          fileName.replace(/\.enc$/i, "").toLowerCase() === cleanHash
+        ) {
+          return NextResponse.json({
+            isAnchored: false,
+            status: "OFFCHAIN_STORED_UNANCHORED",
+            queriedHash: hash,
+            message: `File '${fileName}' exists in local encrypted storage, but has not yet been registered or anchored on a sovereign blockchain. To verify authenticity and provenance, upload and anchor the record through the Hospital Dashboard first.`,
+          });
+        }
+      }
+    } catch {}
+  }
 
   // 3. Fallback: Not Found
   return NextResponse.json({
     isAnchored: false,
     status: "NOT_FOUND",
     queriedHash: hash,
-    message: "No record matching this hash or record ID was found on any sovereign consortium network.",
+    message: "No record matching this cryptographic digest, CID, or record ID was found on any sovereign consortium network.",
   });
 }

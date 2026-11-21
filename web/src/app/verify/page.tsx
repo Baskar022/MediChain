@@ -136,6 +136,15 @@ export default function CrossChainVerifyPage() {
           }
           setIsVerifying(false);
           return;
+        } else {
+          // Unanchored file or Not Found with custom API message
+          setVerificationResult({
+            ...json,
+            network: selectedNetwork,
+            queriedHash: cleanHash,
+          });
+          setIsVerifying(false);
+          return;
         }
       }
 
@@ -145,6 +154,7 @@ export default function CrossChainVerifyPage() {
         status: "NOT_FOUND",
         queriedHash: cleanHash,
         network: selectedNetwork,
+        message: "No record matching this hash or record ID was found on any sovereign consortium network.",
       });
     } catch {
       setVerificationResult({
@@ -152,6 +162,7 @@ export default function CrossChainVerifyPage() {
         status: "NOT_FOUND",
         queriedHash: cleanHash,
         network: selectedNetwork,
+        message: "Network error occurred while querying consortium verification services.",
       });
     } finally {
       setIsVerifying(false);
@@ -159,36 +170,48 @@ export default function CrossChainVerifyPage() {
   };
 
   const handleFileUpload = async (file: File) => {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const content = e.target?.result;
-      if (typeof content === "string") {
+    try {
+      // 1. If it's a JSON or .enc file, inspect ciphertext or record metadata
+      if (file.name.endsWith(".enc") || file.name.endsWith(".json")) {
+        const textContent = await file.text();
         let hashToQuery = "";
 
-        // 1. If it's a MediChain .enc storage file (JSON with ciphertext)
         try {
-          const parsed = JSON.parse(content);
-          if (parsed && typeof parsed === "object" && parsed.ciphertext) {
-            hashToQuery = computeSha256(parsed.ciphertext);
+          const parsed = JSON.parse(textContent);
+          if (parsed && typeof parsed === "object") {
+            if (parsed.ciphertext) {
+              hashToQuery = computeSha256(parsed.ciphertext);
+            } else if (parsed.recordHash) {
+              hashToQuery = parsed.recordHash;
+            } else if (parsed.recordId) {
+              hashToQuery = parsed.recordId;
+            }
           }
         } catch {}
 
-        // 2. If it's an .enc file named after the recordId (e.g. rec_123.enc)
         if (!hashToQuery && file.name.endsWith(".enc")) {
-          const baseName = file.name.replace(/\.enc$/i, "");
-          hashToQuery = baseName;
+          hashToQuery = file.name.replace(/\.enc$/i, "");
         }
 
-        // 3. Fallback: compute direct SHA-256 of uploaded raw document (PDF/TXT/JSON)
         if (!hashToQuery) {
-          hashToQuery = computeSha256(content);
+          hashToQuery = computeSha256(textContent);
         }
 
         setSearchHash(hashToQuery);
         executeVerify(hashToQuery, isTamperActive);
+        return;
       }
-    };
-    reader.readAsText(file);
+
+      // 2. Binary file (PDF, JPG, PNG, DICOM, etc.): Read array buffer and compute true byte SHA-256
+      const arrayBuffer = await file.arrayBuffer();
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const hashToQuery = computeSha256(uint8Array);
+
+      setSearchHash(hashToQuery);
+      executeVerify(hashToQuery, isTamperActive);
+    } catch (err: any) {
+      console.error("File reading error:", err);
+    }
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -401,6 +424,8 @@ export default function CrossChainVerifyPage() {
                       ? "bg-amber-600"
                       : verificationResult.status === "TAMPER_DETECTED"
                       ? "bg-rose-600"
+                      : verificationResult.status === "OFFCHAIN_STORED_UNANCHORED"
+                      ? "bg-sky-600"
                       : "bg-slate-600"
                   }`}
                 >
@@ -410,6 +435,8 @@ export default function CrossChainVerifyPage() {
                     <AlertTriangle className="w-6 h-6" />
                   ) : verificationResult.status === "TAMPER_DETECTED" ? (
                     <ShieldAlert className="w-6 h-6" />
+                  ) : verificationResult.status === "OFFCHAIN_STORED_UNANCHORED" ? (
+                    <FileText className="w-6 h-6" />
                   ) : (
                     <XCircle className="w-6 h-6" />
                   )}
@@ -423,6 +450,8 @@ export default function CrossChainVerifyPage() {
                         ? "Record Revoked by Patient"
                         : verificationResult.status === "TAMPER_DETECTED"
                         ? "Integrity Violation: Tampering Detected!"
+                        : verificationResult.status === "OFFCHAIN_STORED_UNANCHORED"
+                        ? "File Found in Storage (Unanchored on Blockchain)"
                         : "Record Not Found on Consortium Networks"}
                     </h2>
                     <span
@@ -433,6 +462,8 @@ export default function CrossChainVerifyPage() {
                           ? "bg-amber-100 text-amber-800"
                           : verificationResult.status === "TAMPER_DETECTED"
                           ? "bg-rose-100 text-rose-800"
+                          : verificationResult.status === "OFFCHAIN_STORED_UNANCHORED"
+                          ? "bg-sky-100 text-sky-800"
                           : "bg-slate-100 text-slate-800"
                       }`}
                     >
@@ -446,6 +477,8 @@ export default function CrossChainVerifyPage() {
                       ? `This record was legitimately anchored, but active consent has been revoked on-chain by the patient.`
                       : verificationResult.status === "TAMPER_DETECTED"
                       ? `CRITICAL ALERT: File hash mismatch! One or more bytes in the ciphertext do not match the on-chain SHA-256 anchor.`
+                      : verificationResult.status === "OFFCHAIN_STORED_UNANCHORED"
+                      ? (verificationResult.message || `File exists in off-chain encrypted storage, but has not yet been registered or anchored on a blockchain. Upload and anchor it through the Hospital Dashboard to verify authenticity.`)
                       : `The queried hash was not found. It may not have been anchored yet or the hash is invalid.`}
                   </p>
                 </div>

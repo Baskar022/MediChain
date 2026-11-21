@@ -1,8 +1,9 @@
 /**
- * ChainAdapter Interface
- * Defines the unified, technology-agnostic interface that any underlying blockchain
- * (EVM Hardhat, Ethereum Sepolia, Custom Hash-Chained Ledger, Hyperledger Fabric)
- * must implement to participate in the MediChain Cross-Chain Interoperability Network.
+ * Technology-Agnostic ChainAdapter Interface
+ * 
+ * Defines the unified contract that any sovereign blockchain adapter
+ * (Ethereum Sepolia, Polygon Amoy, Algorand TestNet, Hyperledger Fabric)
+ * must implement to participate in the cross-chain interoperability network.
  */
 
 export interface BlockInfo {
@@ -26,6 +27,7 @@ export interface RecordInclusionProof {
   blockHash: string;
   merkleProof: string[];
   rootHash: string;
+  txId?: string;
 }
 
 export interface ConsentResult {
@@ -53,16 +55,23 @@ export interface ChainEvent {
   txHash: string;
 }
 
+export interface HealthCheckResult {
+  online: boolean;
+  blockHeight: number;
+  chainIdOrGenesis: string;
+  latencyMs: number;
+}
+
 export interface ChainAdapter {
   /**
-   * Unique identifier of this chain adapter instance (e.g. "EVM-NETWORK-A", "LEDGER-NETWORK-C")
+   * Unique identifier of this chain adapter instance (e.g. "ETHEREUM_SEPOLIA", "POLYGON_AMOY", "ALGORAND_TESTNET")
    */
   readonly chainIdentifier: string;
 
   /**
-   * Chain classification: "EVM" or "PERMISSIONED_LEDGER"
+   * Chain classification
    */
-  readonly chainType: "EVM" | "PERMISSIONED_LEDGER";
+  readonly chainType: "EVM" | "ALGORAND" | "FABRIC" | "PERMISSIONED_LEDGER";
 
   /**
    * Registers a newly issued medical record anchor on the local sovereign chain.
@@ -73,12 +82,25 @@ export interface ChainAdapter {
     cipherHash: string,
     recordType: string,
     issuerSignature: string,
-    storageRef: string
+    storageRef: string // IPFS CID or local storage URI
   ): Promise<RecordRegistrationResult>;
 
   /**
-   * Retrieves the cryptographic inclusion proof (Merkle branch & block header)
-   * proving that a record exists on this chain at a specific block height.
+   * Registers a verified cross-chain foreign record reference on the destination chain.
+   */
+  registerForeignProof(
+    recordId: string,
+    sourceChain: string,
+    sourceInstitution: string,
+    recordHash: string,
+    cipherHash: string,
+    storageRef: string,
+    attestationSignature: string
+  ): Promise<RecordRegistrationResult>;
+
+  /**
+   * Retrieves the cryptographic inclusion proof (Merkle branch & block header / tx receipt)
+   * proving that a record exists on this chain at a specific block height / round.
    */
   getRecordProof(recordId: string): Promise<RecordInclusionProof>;
 
@@ -119,7 +141,7 @@ export interface ChainAdapter {
   ): Promise<AuditLogResult>;
 
   /**
-   * Retrieves block header information.
+   * Retrieves current block header / round information.
    */
   getBlockInfo(blockNumber?: number): Promise<BlockInfo>;
 
@@ -136,4 +158,9 @@ export interface ChainAdapter {
    * Subscribes to on-chain events emitted by this chain.
    */
   subscribeEvents(callback: (event: ChainEvent) => void): () => void;
+
+  /**
+   * Evaluates network connectivity and latency.
+   */
+  healthCheck(): Promise<HealthCheckResult>;
 }

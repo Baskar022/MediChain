@@ -1,0 +1,4 @@
+#pragma version 9
+// Minimal Clear State Program
+int 1
+return
