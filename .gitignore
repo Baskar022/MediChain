@@ -35,6 +35,9 @@ test-results.json
 .env.test.local
 .env.production.local
 
+# Storage & test payloads
+storage/rec_test_*.enc
+
 # Operating System files
 .DS_Store
 Thumbs.db

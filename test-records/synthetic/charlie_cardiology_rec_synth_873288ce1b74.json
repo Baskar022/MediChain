@@ -1,0 +1,33 @@
+{
+  "resourceType": "DiagnosticReport",
+  "id": "rec_synth_873288ce1b74",
+  "status": "final",
+  "category": "CARDIOLOGY",
+  "code": {
+    "system": "http://loinc.org",
+    "code": "11524-6",
+    "display": "12-Lead Electrocardiogram & Echocardiography Study"
+  },
+  "subject": {
+    "globalPatientId": "0x9900b5de89e21cc360156fd5bcf0059e5f5654b021a9ccd168f2a16dabfd6115",
+    "pseudonym": "0x9b7ec9bd51b93b212d116b144d22f15fb5d07f11849f326a263677e8622f7fdb",
+    "displayName": "Charlie D. Evans (Synthetic)"
+  },
+  "effectiveDateTime": "2026-11-21T02:31:04.046Z",
+  "issued": "2026-11-21T02:31:04.046Z",
+  "performer": {
+    "institutionId": "hospital-sepolia-01",
+    "institutionName": "City General Hospital",
+    "chainIdentifier": "11155111",
+    "practitionerName": "Dr. Evelyn Reed, MD",
+    "practitionerWallet": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+  },
+  "conclusion": "Normal sinus rhythm at 72 bpm. Left ventricular ejection fraction 62%. No acute ischemic ST changes.",
+  "criticalAlert": false,
+  "notes": [
+    "Blood Pressure: 122/78 mmHg",
+    "PR Interval: 156 ms",
+    "QRS Duration: 88 ms",
+    "QTc Interval: 412 ms"
+  ]
+}

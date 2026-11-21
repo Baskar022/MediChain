@@ -1,0 +1,16 @@
+{
+  "network": "sepolia",
+  "chainId": 11155111,
+  "deployer": "0x7950ab74636b4eAA9560C6f667bcaE3bC867B2f9",
+  "deployedAt": "2026-11-21T02:15:15.142Z",
+  "contracts": {
+    "MinimalForwarder": "0xc2F4bEB0506A36BD10396f2ef24eC912579057d3",
+    "StaffRegistry": "0x15206700fD96209aA64d3884CfEe51532316B1e1",
+    "HospitalRegistry": "0x37Eb4068f010De307430f6eF444f45a989fE6f84",
+    "AuditLog": "0xe4680b2414f5E8049Fa994E935b23C22b8154090",
+    "RecordRegistry": "0x2E1b1Ffc914c0f4c91F76D1888Fce2707440aC4E",
+    "ConsentManager": "0x76732999Ee48d54fE8C4E5E1F8EfbcF4dDa3D63c",
+    "ForeignRecordRef": "0x04B4AE4B8ADE423763f60B5Ce78371B46Ea303a8",
+    "FederationRegistry": "0x2EBE0cb4dC36F69B4F1263B23Fd490cBFcE29aA7"
+  }
+}

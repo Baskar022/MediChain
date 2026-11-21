@@ -40,8 +40,8 @@ async function main() {
   }
 
   // 1. Read TEAL contracts
-  const approvalPath = path.join(__dirname, "../contracts/algorand/DiagnosticLabApp.teal");
-  const clearPath = path.join(__dirname, "../contracts/algorand/ClearState.teal");
+  const approvalPath = path.resolve(process.cwd(), "contracts/algorand/DiagnosticLabApp.teal");
+  const clearPath = path.resolve(process.cwd(), "contracts/algorand/ClearState.teal");
 
   if (!fs.existsSync(approvalPath) || !fs.existsSync(clearPath)) {
     console.error("❌ ERROR: TEAL contract files not found at:", approvalPath);
@@ -85,7 +85,7 @@ async function main() {
   console.log("Submitted TX ID:", txid);
   console.log("Waiting for confirmation on Algorand TestNet...");
 
-  const confirmedTxn = await algosdk.waitForConfirmation(algodClient, txid, 5);
+  const confirmedTxn: any = await algosdk.waitForConfirmation(algodClient, txid, 5);
   const appId = Number(confirmedTxn.applicationIndex || confirmedTxn["application-index"]);
 
   console.log("\n=================================================");

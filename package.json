@@ -25,7 +25,7 @@
     "deploy:sepolia": "npm --prefix contracts run deploy:sepolia",
     "deploy:amoy": "npm --prefix contracts run deploy:amoy",
     "deploy:algorand": "ts-node -P interop/tsconfig.json scripts/deploy-algorand.ts",
-    "seed": "npx ts-node scripts/seed.ts",
+    "seed": "ts-node -P interop/tsconfig.json scripts/seed-neon.ts",
     "seed:demo": "ts-node -P interop/tsconfig.json scripts/seed-interop.ts",
     "seed:interop": "ts-node -P interop/tsconfig.json scripts/seed-interop.ts",
     "status": "ts-node -P interop/tsconfig.json scripts/status.ts",

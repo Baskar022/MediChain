@@ -14,30 +14,24 @@ async function main() {
   console.log(" Deployer Balance:", ethers.formatEther(balance), "POL");
   console.log("=================================================");
 
-  if (balance === 0n) {
-    console.warn("⚠ WARNING: Deployer balance is 0 POL. Deployment will fail without Polygon Amoy faucet funds.");
-  }
+  // Gas overrides tailored for Polygon Amoy to fit within deployer balance
+  const maxPriorityFeePerGas = ethers.parseUnits("30", "gwei");
+  const maxFeePerGas = ethers.parseUnits("38", "gwei");
+  const txOverrides = { maxFeePerGas, maxPriorityFeePerGas, gasLimit: 1300000 };
 
-  // 1. Deploy MinimalForwarder (ERC-2771 Gasless Meta-Transactions)
-  console.log("\n[1/7] Deploying MinimalForwarder (ERC-2771)...");
-  const Forwarder = await ethers.getContractFactory("MinimalForwarder");
-  const forwarder = await Forwarder.deploy();
-  await forwarder.waitForDeployment();
-  const forwarderAddress = await forwarder.getAddress();
-  console.log("✔ MinimalForwarder deployed to:", forwarderAddress);
+  console.log(`Gas overrides: PriorityFee=30 Gwei, MaxFee=38 Gwei, GasLimit=1300000`);
 
-  // 2. Deploy StaffRegistry (Hospital 2 Staff Roles)
-  console.log("\n[2/7] Deploying StaffRegistry (Hospital 2 Staff Roles)...");
-  const StaffRegistry = await ethers.getContractFactory("StaffRegistry");
-  const staffRegistry = await StaffRegistry.deploy(forwarderAddress, deployer.address);
-  await staffRegistry.waitForDeployment();
-  const staffRegistryAddress = await staffRegistry.getAddress();
-  console.log("✔ StaffRegistry deployed to:", staffRegistryAddress);
+  // Reuse already deployed MinimalForwarder & StaffRegistry if valid
+  let forwarderAddress = "0xc5D5c5dDf16136Aa25998A2AD2407191c8746F27";
+  let staffRegistryAddress = "0x58D0cb219E268391cA783ABF27a894a0A146Dd27";
+
+  console.log("\n[1/7] MinimalForwarder (ERC-2771):", forwarderAddress);
+  console.log("[2/7] StaffRegistry (Hospital 2 Staff Roles):", staffRegistryAddress);
 
   // 3. Deploy HospitalRegistry
   console.log("\n[3/7] Deploying HospitalRegistry...");
   const HospitalRegistry = await ethers.getContractFactory("HospitalRegistry");
-  const hospitalRegistry = await HospitalRegistry.deploy(deployer.address);
+  const hospitalRegistry = await HospitalRegistry.deploy(deployer.address, txOverrides);
   await hospitalRegistry.waitForDeployment();
   const hospitalRegistryAddress = await hospitalRegistry.getAddress();
   console.log("✔ HospitalRegistry deployed to:", hospitalRegistryAddress);
@@ -45,7 +39,7 @@ async function main() {
   // 4. Deploy AuditLog
   console.log("\n[4/7] Deploying AuditLog...");
   const AuditLog = await ethers.getContractFactory("AuditLog");
-  const auditLog = await AuditLog.deploy(deployer.address);
+  const auditLog = await AuditLog.deploy(deployer.address, txOverrides);
   await auditLog.waitForDeployment();
   const auditLogAddress = await auditLog.getAddress();
   console.log("✔ AuditLog deployed to:", auditLogAddress);
@@ -56,7 +50,8 @@ async function main() {
   const recordRegistry = await RecordRegistry.deploy(
     deployer.address,
     hospitalRegistryAddress,
-    auditLogAddress
+    auditLogAddress,
+    { ...txOverrides, gasLimit: 1800000 }
   );
   await recordRegistry.waitForDeployment();
   const recordRegistryAddress = await recordRegistry.getAddress();
@@ -69,7 +64,8 @@ async function main() {
     deployer.address,
     hospitalRegistryAddress,
     recordRegistryAddress,
-    auditLogAddress
+    auditLogAddress,
+    { ...txOverrides, gasLimit: 2200000 }
   );
   await consentManager.waitForDeployment();
   const consentManagerAddress = await consentManager.getAddress();
@@ -78,7 +74,7 @@ async function main() {
   // 7. Deploy ForeignRecordRef (Cross-chain ingested proofs)
   console.log("\n[7/7] Deploying ForeignRecordRef (Cross-Chain Storage)...");
   const ForeignRecordRef = await ethers.getContractFactory("ForeignRecordRef");
-  const foreignRecordRef = await ForeignRecordRef.deploy(forwarderAddress, deployer.address);
+  const foreignRecordRef = await ForeignRecordRef.deploy(forwarderAddress, deployer.address, txOverrides);
   await foreignRecordRef.waitForDeployment();
   const foreignRecordRefAddress = await foreignRecordRef.getAddress();
   console.log("✔ ForeignRecordRef deployed to:", foreignRecordRefAddress);
@@ -86,9 +82,9 @@ async function main() {
   // 8. Configure Role Permissions
   console.log("\nConfiguring Contract Roles...");
   const RECORDER_ROLE = await auditLog.RECORDER_ROLE();
-  let tx = await auditLog.grantRole(RECORDER_ROLE, recordRegistryAddress);
+  let tx = await auditLog.grantRole(RECORDER_ROLE, recordRegistryAddress, txOverrides);
   await tx.wait();
-  tx = await auditLog.grantRole(RECORDER_ROLE, consentManagerAddress);
+  tx = await auditLog.grantRole(RECORDER_ROLE, consentManagerAddress, txOverrides);
   await tx.wait();
   console.log("✔ AuditLog roles configured.");
 

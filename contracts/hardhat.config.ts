@@ -49,7 +49,7 @@ const config: HardhatUserConfig = {
       url: AMOY_RPC_URL,
       accounts: accounts,
       chainId: 80002,
-      timeout: 60000,
+      timeout: 120000,
     },
     // Fallback EVM Testnet B: Arbitrum Sepolia
     arbitrumSepolia: {
